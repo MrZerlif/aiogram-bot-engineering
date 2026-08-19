@@ -21,7 +21,12 @@ Compatibility baseline: Python 3.10+, aiogram 3.30.0, aiogram-dialog 2.6.0, and 
 | PostgreSQL, idempotency, queues, rate limits, observability, or production reliability | [production engineering](references/production-engineering.md) |
 | A complete aiogram-dialog example | [full dialog example](examples/dialog-bot.py) |
 
-Prefer native aiogram APIs; use aiogram-dialog for multi-screen, stateful interaction and native keyboards only for simple single-screen actions. Do not mix frameworks or use raw Bot API HTTP calls. Keep Mini App frontend and MTProto work outside this skill's implementation boundary.
+Prefer native aiogram APIs. Use a handler/native keyboard for one action or
+screen, native FSM for short linear input, experimental Scenes for an isolated
+flow that needs lifecycle or history, aiogram-dialog for widget-driven UI,
+pagination, dialog stacks, or nested flows, and a Mini App for a complex
+browser UI. Do not mix frameworks or use raw Bot API HTTP calls. Keep Mini App
+frontend and MTProto work outside this skill's implementation boundary.
 
 Treat tokens as secrets from environment variables or a secret manager. Verify Mini App identity and authorization server-side. Treat callback data as an identifier: fetch referenced objects and authorize actions server-side. Log unexpected exceptions and let centralized error handling receive them. Use persistent production FSM/session storage. Fulfill payments idempotently only after confirmed success. Never imply live deployment, payment-provider mutation, or other external action without authorization.
 

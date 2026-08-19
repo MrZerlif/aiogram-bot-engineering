@@ -1,10 +1,10 @@
 # Dialogs and UI
 
-Use **aiogram-dialog 2.6.0** by default when an interaction has more than one
-screen, needs state, accepts input over time, or shows a changing collection.
-It owns the dialog stack and lets each `Window` describe one state. Use native
-aiogram keyboards only for a small, single-screen action; do not rebuild a
-multi-window flow out of callback handlers.
+Choose **aiogram-dialog 2.6.0** when the UI is widget-driven or needs
+pagination, a dialog stack, or nested flows. It owns that stack and lets each
+`Window` describe one state. Having more than one state is not sufficient by
+itself: use native FSM or Scenes for the simpler stateful flows in the matrix
+below, and keep native keyboards for small actions or screens.
 
 ## State and UI choice
 
