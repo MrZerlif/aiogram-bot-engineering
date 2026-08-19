@@ -50,7 +50,7 @@
     "topics": ["payments"],
     "expected_references": ["SKILL.md", "references/payments.md", "references/production-engineering.md"],
     "retrieval_assertions": ["Finds the payment lifecycle reference, including pre-checkout and successful-payment handling."],
-    "application_assertions": ["Answers pre-checkout queries promptly and fulfills only after successful_payment.", "Persists a provider charge identifier to make fulfillment idempotent."],
+    "application_assertions": ["Answers pre-checkout queries promptly and fulfills only after successful_payment.", "Persists the stable Telegram charge identifier, plus a provider identifier when present, to make fulfillment idempotent."],
     "gap_assertions": ["Rejects granting access when an invoice is sent or when pre-checkout succeeds."]
   },
   {

@@ -12,6 +12,7 @@ EVALS_ROOT = REPOSITORY_ROOT / "tests" / "skill-evals"
 CASES_PATH = EVALS_ROOT / "cases.yaml"
 BASELINE_PATH = EVALS_ROOT / "baseline-without-skill.md"
 RESULTS_PATH = EVALS_ROOT / "results-with-skill.md"
+ASSESSMENT_PATH = EVALS_ROOT / "evaluation-summary.md"
 BUNDLE_ROOT = REPOSITORY_ROOT / "skill" / "aiogram-bot-engineering"
 
 REQUIRED_CASE_IDS = {
@@ -97,6 +98,22 @@ def test_evidence_sections_have_substantive_case_specific_bodies() -> None:
 def test_bundle_reference_rejects_a_parent_directory_escape() -> None:
     with pytest.raises(ValueError, match="escapes the skill bundle"):
         resolve_bundle_reference("../outside.md")
+
+
+def test_independent_assessment_covers_every_case_with_numeric_scores() -> None:
+    assert ASSESSMENT_PATH.is_file(), f"missing eval assessment: {ASSESSMENT_PATH}"
+    sections = parse_evidence_sections(ASSESSMENT_PATH)
+    assert {section.case_id for section in sections} == REQUIRED_CASE_IDS
+    assert all(len(section.body.split()) >= 20 for section in sections)
+
+    content = ASSESSMENT_PATH.read_text(encoding="utf-8")
+    for case_id in REQUIRED_CASE_IDS:
+        row = re.search(
+            rf"^\|\s*{re.escape(case_id)}\s*\|\s*\d+/\d+\s*\|\s*\d+/\d+\s*\|",
+            content,
+            re.MULTILINE,
+        )
+        assert row is not None, f"missing numeric assessment row for {case_id}"
 
 
 def test_skill_eval_artifacts_are_complete_and_reachable() -> None:
