@@ -329,7 +329,6 @@ def _resource_files(bundle_root: Path, directory: str) -> set[Path]:
         path.relative_to(bundle_root)
         for path in root.rglob("*")
         if path.is_file()
-        and "__pycache__" not in path.relative_to(root).parts
         and path.suffix not in {".pyc", ".pyo"}
     }
 

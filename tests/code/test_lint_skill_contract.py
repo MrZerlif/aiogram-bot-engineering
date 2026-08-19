@@ -218,6 +218,17 @@ def test_ignores_generated_python_cache_artifacts(tmp_path: Path) -> None:
     assert lint_repository(repo) == []
 
 
+def test_does_not_hide_source_resources_inside_a_cache_named_directory(
+    tmp_path: Path,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    cache = bundle_path(repo) / "examples" / "__pycache__"
+    cache.mkdir()
+    (cache / "hidden.py").write_text("print('not routed')\n", encoding="utf-8")
+
+    assert any("orphan example" in error for error in lint_repository(repo))
+
+
 def test_real_repository_has_no_orphan_resources() -> None:
     assert lint_skill_bundle(REPOSITORY_ROOT / BUNDLE_RELATIVE) == []
 
