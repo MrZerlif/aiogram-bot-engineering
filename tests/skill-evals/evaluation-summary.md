@@ -58,4 +58,3 @@ Both outputs make the order mutation and outbox event atomic inside a unit of wo
 ## Overall findings
 
 The control satisfies 38/40 assertions (95%), while the treatment satisfies 40/40 (100%), for a +2 assertion improvement. The treatment has no remaining rubric gaps; its measurable gains are the explicit Scene-versus-simple-FSM routing rationale and the direct rejection of `asyncio.create_task` as the only durability mechanism.
-
