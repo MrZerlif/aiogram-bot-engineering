@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import json
+from collections.abc import Iterable
 import hashlib
+import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePath, PureWindowsPath
+from typing import TypeVar
 
 import pytest
 
@@ -18,6 +20,7 @@ ASSERTION_RESULTS_PATH = EVALS_ROOT / "assertion-results.json"
 RETRIEVAL_TRACE_PATH = EVALS_ROOT / "retrieval-trace.json"
 RUN_MANIFEST_PATH = EVALS_ROOT / "run-manifest.json"
 BUNDLE_ROOT = REPOSITORY_ROOT / "skill" / "aiogram-bot-engineering"
+BundlePath = TypeVar("BundlePath", bound=PurePath)
 
 REQUIRED_CASE_IDS = {
     "fsm-linear-flow",
@@ -77,18 +80,38 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def ordered_bundle_paths(
+    paths: Iterable[BundlePath],
+    root: PurePath,
+) -> list[BundlePath]:
+    return sorted(paths, key=lambda item: item.relative_to(root).as_posix())
+
+
 def bundle_sha256() -> str:
     digest = hashlib.sha256()
-    for path in sorted(
+    paths = (
         item
         for item in BUNDLE_ROOT.rglob("*")
         if item.is_file()
         and "__pycache__" not in item.relative_to(BUNDLE_ROOT).parts
         and item.suffix not in {".pyc", ".pyo"}
-    ):
+    )
+    for path in ordered_bundle_paths(paths, BUNDLE_ROOT):
         relative = path.relative_to(BUNDLE_ROOT).as_posix().encode()
         digest.update(relative + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
+
+
+def test_bundle_paths_use_platform_neutral_posix_order() -> None:
+    bundle = PureWindowsPath("C:/bundle")
+    paths = [bundle / "agents" / "openai.yaml", bundle / "SKILL.md"]
+
+    ordered = ordered_bundle_paths(paths, bundle)
+
+    assert [path.relative_to(bundle).as_posix() for path in ordered] == [
+        "SKILL.md",
+        "agents/openai.yaml",
+    ]
 
 
 def normalized_excerpt(text: str) -> str:

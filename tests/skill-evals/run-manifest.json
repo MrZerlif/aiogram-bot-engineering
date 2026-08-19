@@ -17,7 +17,7 @@
   "skill_snapshot": {
     "commit": "67d5f9d0564c2251250fe71951901ca011f356ad",
     "bundle_path": "skill/aiogram-bot-engineering",
-    "bundle_sha256": "fe7c4a305d88d2f6067b4bdefb1c6595930e7ed6de4e00e064a220488b5f0cb2",
+    "bundle_sha256": "16043c43a0a4cf4d02c5885801d347539c2eb07c35d75144e3961b64b0ca1dac",
     "note": "This commit contains the bundle content available to the final treatment runner."
   },
   "artifacts": {
