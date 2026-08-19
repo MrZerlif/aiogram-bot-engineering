@@ -98,7 +98,10 @@ stop accepting new work, allow in-flight work to finish, and close application
 resources for a graceful shutdown.
 
 Do not run polling alongside this webhook: the modes are mutually exclusive.
-Use the platform's readiness or health endpoint for process health, and inspect
+Expose liveness separately from readiness: liveness answers whether the process
+needs restarting, while readiness stays false until required dependencies (for
+example, database, FSM storage, and an essential queue) are configured and
+usable. Do not report ready merely because the HTTP server has started. Inspect
 `await bot.get_webhook_info()` (the `Bot.get_webhook_info` API) when diagnosing
 webhook URL, pending updates, or the last delivery error. Treat those results
 as diagnostics, not a substitute for application logs and alerting.

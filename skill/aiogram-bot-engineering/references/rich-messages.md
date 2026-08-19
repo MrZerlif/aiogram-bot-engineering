@@ -40,6 +40,11 @@ rich_message = InputRichMessage(
 await bot.send_rich_message(chat_id=chat_id, rich_message=rich_message)
 ```
 
+Escape untrusted text for the exact selected context: HTML escaping is not
+Markdown escaping, and neither is safe to interpolate into URLs, attributes,
+or a structured block model. When the correct escaping rule is unclear, prefer
+plain text or construct typed structured blocks instead of assembling markup.
+
 ## Media and limits
 
 The media shape depends on the selected content source. For `html` or

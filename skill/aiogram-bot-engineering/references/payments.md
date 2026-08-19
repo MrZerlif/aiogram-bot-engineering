@@ -101,6 +101,30 @@ field. When a provider ID applies, use provider-scoped uniqueness over non-null
 values. A duplicate event returns the recorded result rather than granting
 twice.
 
+## Order policies and after-payment changes
+
+Choose and persist a policy for multiple otherwise-valid payments of the same
+account or order: reject a second payment before checkout, treat it as account
+credit, create a separate order, or accept it only as an explicitly supported
+renewal. Never silently grant the same one-time entitlement twice. A physical
+or flexible invoice also needs server-side shipping-query validation: calculate
+eligible shipping options from the stored order and address, then revalidate the
+selected option and final total at pre-checkout.
+
+Model payment state transitions explicitly, including `pending`, `paid`,
+`fulfilled`, `refunded`, and any product-specific `reversed` or `disputed`
+state. Make every transition idempotent and audit it with the stable Telegram
+or provider event identifier. Reconcile recorded charges and entitlements
+against Telegram/provider reports; queue manual investigation for mismatches,
+refunds, reversals, and chargebacks rather than applying ad-hoc edits.
+
+Stars (`XTR`) and external subscriptions are distinct payment products. For
+Stars, use the Telegram charge identifier and Telegram's supported refund and
+subscription lifecycle APIs; an absent provider charge ID is normal. For an
+external subscription, verify the provider webhook, map its stable event and
+subscription IDs to durable state, and handle renewal, cancellation, refund,
+and chargeback events idempotently. A browser return URL is never confirmation.
+
 ## External checkout boundary
 
 When the explicit decision is external checkout, integrate the chosen

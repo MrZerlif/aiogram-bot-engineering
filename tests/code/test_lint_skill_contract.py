@@ -162,3 +162,12 @@ def test_rejects_an_unrouted_bundle_example(tmp_path: Path) -> None:
 
 def test_real_repository_has_no_orphan_resources() -> None:
     assert lint_skill_bundle(REPOSITORY_ROOT / BUNDLE_RELATIVE) == []
+
+
+def test_real_bundle_directly_routes_testing_and_production_references() -> None:
+    routes = inspect_skill_routes(REPOSITORY_ROOT / BUNDLE_RELATIVE)
+
+    assert {
+        Path("references/testing.md"),
+        Path("references/production-engineering.md"),
+    } <= routes.references
