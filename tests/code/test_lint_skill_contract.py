@@ -76,6 +76,22 @@ def test_rejects_an_orphan_reference(tmp_path: Path) -> None:
     assert any("orphan reference" in error for error in lint_repository(repo))
 
 
+def test_rejects_reference_hidden_in_an_unused_reference_definition(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    add_reference(repo, "orphan.md", routed=False)
+    append_skill(repo, "[fake]: references/orphan.md")
+
+    assert any("orphan reference" in error for error in lint_repository(repo))
+
+
+def test_rejects_reference_hidden_in_inline_code(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    add_reference(repo, "orphan.md", routed=False)
+    append_skill(repo, "`[fake](references/orphan.md)`")
+
+    assert any("orphan reference" in error for error in lint_repository(repo))
+
+
 def test_rejects_invalid_python_fence(tmp_path: Path) -> None:
     repo = make_valid_repository(tmp_path)
     append_skill(repo, "```python\nif True print('broken')\n```")

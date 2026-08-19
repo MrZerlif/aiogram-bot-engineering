@@ -111,9 +111,43 @@ def _reference_definitions(text: str) -> dict[str, str]:
     return definitions
 
 
+def _strip_inline_code(text: str) -> str:
+    stripped = list(text)
+    index = 0
+    while index < len(text):
+        if text[index] != "`":
+            index += 1
+            continue
+        opening_end = index
+        while opening_end < len(text) and text[opening_end] == "`":
+            opening_end += 1
+        marker_length = opening_end - index
+        closing_start = opening_end
+        while closing_start < len(text):
+            closing_start = text.find("`", closing_start)
+            if closing_start < 0:
+                break
+            closing_end = closing_start
+            while closing_end < len(text) and text[closing_end] == "`":
+                closing_end += 1
+            if closing_end - closing_start == marker_length:
+                for position in range(index, closing_end):
+                    if text[position] != "\n":
+                        stripped[position] = " "
+                index = closing_end
+                break
+            closing_start = closing_end
+        else:
+            index = opening_end
+        if closing_start < 0:
+            index = opening_end
+    return "".join(stripped)
+
+
 def _markdown_destinations(text: str) -> tuple[list[str], list[str]]:
+    text = _strip_inline_code(text)
     definitions = _reference_definitions(text)
-    destinations = list(definitions.values())
+    destinations: list[str] = []
     unresolved_references: list[str] = []
     index = 0
     while index < len(text):
