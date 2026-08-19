@@ -1,0 +1,92 @@
+[
+  {
+    "id": "fsm-linear-flow",
+    "prompt": "Build a three-step registration flow that validates each answer and lets a user cancel at any point.",
+    "topics": ["fsm"],
+    "expected_references": ["SKILL.md", "references/architecture.md"],
+    "retrieval_assertions": ["Routes to the state-management guidance for a linear workflow."],
+    "application_assertions": ["Uses StatesGroup and one state per awaited answer.", "Registers a global cancellation path that clears FSM state."],
+    "gap_assertions": ["Rejects a handler-only design that stores progress in module globals."]
+  },
+  {
+    "id": "scenes-isolated-flow",
+    "prompt": "Add an onboarding journey with entry, exit, back navigation, and per-user data that must not leak between chats.",
+    "topics": ["scenes", "fsm"],
+    "expected_references": ["SKILL.md", "references/architecture.md"],
+    "retrieval_assertions": ["Finds the guidance that distinguishes scene-style flows from a simple FSM."],
+    "application_assertions": ["Chooses a scene for navigation-heavy onboarding.", "Scopes state and collected data to the Telegram user and chat context."],
+    "gap_assertions": ["Calls out shared in-memory dictionaries as unsafe for isolation and restart recovery."]
+  },
+  {
+    "id": "dialog-widget-ui",
+    "prompt": "Create a settings screen with a toggle, pagination, and a confirm action using an aiogram dialog UI.",
+    "topics": ["dialogs", "ui"],
+    "expected_references": ["SKILL.md", "references/dialogs-and-ui.md", "examples/dialog-bot.py"],
+    "retrieval_assertions": ["Routes to the dedicated dialog and widget reference rather than generic inline keyboard advice."],
+    "application_assertions": ["Uses dialog windows and widgets for toggle and pagination state.", "Keeps callback handling inside the dialog interaction model."],
+    "gap_assertions": ["Avoids manually editing one message with ad-hoc callback-data parsing for every widget."]
+  },
+  {
+    "id": "mini-app-launch-security",
+    "prompt": "Launch a Mini App for an account dashboard and authenticate its backend requests safely.",
+    "topics": ["mini-apps", "security"],
+    "expected_references": ["SKILL.md", "references/mini-apps.md"],
+    "retrieval_assertions": ["Finds the Mini App reference and its init-data validation guidance."],
+    "application_assertions": ["Uses a WebApp launch button and forwards initData to the backend.", "Verifies Telegram init-data integrity server-side before trusting user identity."],
+    "gap_assertions": ["Rejects trusting client-supplied user IDs or treating WebView URL parameters as authentication."]
+  },
+  {
+    "id": "callback-authorization",
+    "prompt": "Let moderators approve a report from an inline button, but prevent ordinary users and stale buttons from approving it.",
+    "topics": ["callback-authorization", "security"],
+    "expected_references": ["SKILL.md", "references/architecture.md", "references/production-engineering.md"],
+    "retrieval_assertions": ["Routes to callback handling and production authorization guidance."],
+    "application_assertions": ["Loads the report server-side and checks the actor role before mutation.", "Treats callback data as an opaque identifier and handles an already-resolved report idempotently."],
+    "gap_assertions": ["Rejects relying on the visible button, client role fields, or callback payload as authorization."]
+  },
+  {
+    "id": "payment-lifecycle",
+    "prompt": "Sell a subscription with Telegram payments and make fulfillment safe when updates are retried or arrive out of order.",
+    "topics": ["payments"],
+    "expected_references": ["SKILL.md", "references/payments.md", "references/production-engineering.md"],
+    "retrieval_assertions": ["Finds the payment lifecycle reference, including pre-checkout and successful-payment handling."],
+    "application_assertions": ["Answers pre-checkout queries promptly and fulfills only after successful_payment.", "Persists a provider charge identifier to make fulfillment idempotent."],
+    "gap_assertions": ["Rejects granting access when an invoice is sent or when pre-checkout succeeds."]
+  },
+  {
+    "id": "webhook-secret",
+    "prompt": "Deploy the bot behind HTTPS webhooks and ensure that random internet traffic cannot invoke the update endpoint.",
+    "topics": ["webhook", "security", "deployment"],
+    "expected_references": ["SKILL.md", "references/deployment.md", "references/production-engineering.md"],
+    "retrieval_assertions": ["Routes to deployment and webhook operational guidance."],
+    "application_assertions": ["Configures a secret token and verifies the incoming Telegram secret-token header.", "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing."],
+    "gap_assertions": ["Rejects an unauthenticated public POST endpoint and logging the bot token or secret header."]
+  },
+  {
+    "id": "background-jobs",
+    "prompt": "After an order succeeds, send notifications and generate a report without making the update handler slow or losing work on restart.",
+    "topics": ["background-jobs", "production"],
+    "expected_references": ["SKILL.md", "references/architecture.md", "references/production-engineering.md"],
+    "retrieval_assertions": ["Finds the production guidance for durable asynchronous work."],
+    "application_assertions": ["Commits the order transaction before enqueueing or recording durable follow-up work.", "Uses an idempotent worker boundary with retries and observable failures."],
+    "gap_assertions": ["Rejects fire-and-forget create_task work as the only guarantee for a business-critical job."]
+  },
+  {
+    "id": "testing-strategy",
+    "prompt": "Propose tests for a callback-driven order flow, including authorization, payment retries, and UI behavior.",
+    "topics": ["testing", "callback-authorization", "payments"],
+    "expected_references": ["SKILL.md", "references/testing.md", "references/payments.md"],
+    "retrieval_assertions": ["Routes to the dedicated testing reference."],
+    "application_assertions": ["Separates unit tests for decisions from integration tests for handlers and storage.", "Exercises unauthorized callbacks, duplicate successful payments, and asserted bot responses."],
+    "gap_assertions": ["Rejects only snapshotting handler source or testing a happy path with no update payloads."]
+  },
+  {
+    "id": "production-uow-observability",
+    "prompt": "Design a production order-confirmation handler with transactional storage, retries, structured logs, and tracing.",
+    "topics": ["production", "testing", "observability"],
+    "expected_references": ["SKILL.md", "references/production-engineering.md", "references/testing.md"],
+    "retrieval_assertions": ["Finds production engineering and testing guidance for a unit-of-work boundary."],
+    "application_assertions": ["Makes the database mutation and outbox record atomic within a unit of work.", "Includes correlation identifiers, structured failure logs, metrics, and trace propagation across the worker."],
+    "gap_assertions": ["Rejects a best-effort sequence of database writes, bot sends, and prints with no recovery or diagnostics."]
+  }
+]
