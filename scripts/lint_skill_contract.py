@@ -11,7 +11,19 @@ from urllib.parse import unquote, urlsplit
 
 
 BUNDLE_RELATIVE = Path("skill/aiogram-bot-engineering")
-REQUIRED_BUNDLE_FILES = {Path("SKILL.md"), Path("agents/openai.yaml")}
+REQUIRED_BUNDLE_FILES = {
+    Path("SKILL.md"),
+    Path("agents/openai.yaml"),
+    Path("examples/dialog-bot.py"),
+    Path("references/architecture.md"),
+    Path("references/deployment.md"),
+    Path("references/dialogs-and-ui.md"),
+    Path("references/mini-apps.md"),
+    Path("references/payments.md"),
+    Path("references/production-engineering.md"),
+    Path("references/rich-messages.md"),
+    Path("references/testing.md"),
+}
 PROHIBITED_IMPORT_ROOTS = {
     "telebot",
     "telegram",
@@ -313,7 +325,13 @@ def _resource_files(bundle_root: Path, directory: str) -> set[Path]:
     root = bundle_root / directory
     if not root.is_dir():
         return set()
-    return {path.relative_to(bundle_root) for path in root.rglob("*") if path.is_file()}
+    return {
+        path.relative_to(bundle_root)
+        for path in root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.relative_to(root).parts
+        and path.suffix not in {".pyc", ".pyo"}
+    }
 
 
 def lint_skill_bundle(bundle_root: Path) -> list[str]:

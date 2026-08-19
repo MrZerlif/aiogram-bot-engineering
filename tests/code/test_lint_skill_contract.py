@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_ROOT = REPOSITORY_ROOT / "scripts"
@@ -16,6 +18,18 @@ from lint_skill_contract import (  # noqa: E402
 )
 
 
+REQUIRED_REFERENCE_NAMES = (
+    "architecture.md",
+    "deployment.md",
+    "dialogs-and-ui.md",
+    "mini-apps.md",
+    "payments.md",
+    "production-engineering.md",
+    "rich-messages.md",
+    "testing.md",
+)
+
+
 def make_valid_repository(tmp_path: Path) -> Path:
     repo = tmp_path / "repository"
     bundle = repo / BUNDLE_RELATIVE
@@ -23,15 +37,19 @@ def make_valid_repository(tmp_path: Path) -> Path:
     (bundle / "references").mkdir()
     (bundle / "examples").mkdir()
     (bundle / "agents" / "openai.yaml").write_text("interface: {}\n", encoding="utf-8")
-    (bundle / "references" / "architecture.md").write_text("# Architecture\n", encoding="utf-8")
+    for name in REQUIRED_REFERENCE_NAMES:
+        (bundle / "references" / name).write_text(f"# {name}\n", encoding="utf-8")
     (bundle / "examples" / "dialog-bot.py").write_text("print('ok')\n", encoding="utf-8")
+    reference_routes = "\n".join(
+        f"[{name}](references/{name})" for name in REQUIRED_REFERENCE_NAMES
+    )
     (bundle / "SKILL.md").write_text(
-        """---
+        f"""---
 name: test-skill
 description: Test fixture
 ---
 
-[architecture](references/architecture.md)
+{reference_routes}
 [full example](examples/dialog-bot.py)
 """,
         encoding="utf-8",
@@ -108,6 +126,35 @@ def test_rejects_missing_required_bundle_files(tmp_path: Path) -> None:
     assert any("missing required file: agents/openai.yaml" in error for error in errors)
 
 
+@pytest.mark.parametrize(
+    "relative",
+    [
+        *(f"references/{name}" for name in REQUIRED_REFERENCE_NAMES),
+        "examples/dialog-bot.py",
+    ],
+)
+def test_rejects_removing_a_required_routed_resource(
+    tmp_path: Path,
+    relative: str,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    bundle = bundle_path(repo)
+    (bundle / relative).unlink()
+    skill = bundle / "SKILL.md"
+    skill.write_text(
+        "\n".join(
+            line for line in skill.read_text(encoding="utf-8").splitlines()
+            if f"({relative})" not in line
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    errors = lint_repository(repo)
+
+    assert any(f"missing required file: {relative}" in error for error in errors)
+
+
 def test_allows_unrelated_repository_files(tmp_path: Path) -> None:
     repo = make_valid_repository(tmp_path)
     (repo / "README.md").write_text("Repository documentation\n", encoding="utf-8")
@@ -115,14 +162,16 @@ def test_allows_unrelated_repository_files(tmp_path: Path) -> None:
     assert lint_repository(repo) == []
 
 
-def test_allows_a_seventh_direct_skill_reference(tmp_path: Path) -> None:
+def test_allows_additional_direct_skill_references_beyond_the_required_subset(
+    tmp_path: Path,
+) -> None:
     repo = make_valid_repository(tmp_path)
     for number in range(1, 7):
         add_reference(repo, f"topic-{number}.md", routed=True)
 
     routes = inspect_skill_routes(bundle_path(repo))
 
-    assert len(routes.references) == 7
+    assert len(routes.references) == len(REQUIRED_REFERENCE_NAMES) + 6
     assert lint_repository(repo) == []
 
 
@@ -158,6 +207,15 @@ def test_rejects_an_unrouted_bundle_example(tmp_path: Path) -> None:
     add_example(repo, "orphan.py", routed=False)
 
     assert any("orphan example" in error for error in lint_repository(repo))
+
+
+def test_ignores_generated_python_cache_artifacts(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    cache = bundle_path(repo) / "examples" / "__pycache__"
+    cache.mkdir()
+    (cache / "dialog-bot.cpython-310.pyc").write_bytes(b"generated")
+
+    assert lint_repository(repo) == []
 
 
 def test_real_repository_has_no_orphan_resources() -> None:
