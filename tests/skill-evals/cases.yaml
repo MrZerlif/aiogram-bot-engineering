@@ -12,9 +12,9 @@
     "id": "scenes-isolated-flow",
     "prompt": "Add an onboarding journey with entry, exit, back navigation, and per-user data that must not leak between chats.",
     "topics": ["scenes", "fsm"],
-    "expected_references": ["SKILL.md", "references/architecture.md"],
-    "retrieval_assertions": ["Finds the guidance that distinguishes scene-style flows from a simple FSM."],
-    "application_assertions": ["Chooses a scene for navigation-heavy onboarding.", "Scopes state and collected data to the Telegram user and chat context."],
+    "expected_references": ["SKILL.md", "references/architecture.md", "references/dialogs-and-ui.md"],
+    "retrieval_assertions": ["Finds the dialogs-and-ui guidance that distinguishes Scenes from a simple FSM and covers lifecycle, history, and back navigation."],
+    "application_assertions": ["Chooses a scene for navigation-heavy onboarding with explicit entry, exit, and back behavior.", "Scopes state and collected data to the Telegram user and chat context."],
     "gap_assertions": ["Calls out shared in-memory dictionaries as unsafe for isolation and restart recovery."]
   },
   {

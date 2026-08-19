@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 EVALS_ROOT = REPOSITORY_ROOT / "tests" / "skill-evals"
@@ -46,6 +48,12 @@ REQUIRED_CASE_FIELDS = {
 }
 
 
+@dataclass(frozen=True)
+class EvidenceSection:
+    case_id: str
+    body: str
+
+
 def load_cases(path: Path) -> list[dict[str, object]]:
     """Load the JSON-form YAML fixture without adding a YAML dependency."""
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -54,9 +62,41 @@ def load_cases(path: Path) -> list[dict[str, object]]:
     return data
 
 
-def markdown_case_section_ids(path: Path) -> list[str]:
-    """Return the level-two case identifiers in an evidence artifact."""
-    return re.findall(r"^## ([a-z0-9-]+)\s*$", path.read_text(encoding="utf-8"), re.MULTILINE)
+def parse_evidence_sections(path: Path) -> list[EvidenceSection]:
+    """Parse each level-two case heading and the evidence body it owns."""
+    content = path.read_text(encoding="utf-8")
+    headings = list(re.finditer(r"^## ([a-z0-9-]+)\s*$", content, re.MULTILINE))
+    return [
+        EvidenceSection(
+            heading.group(1),
+            content[heading.end() : headings[index + 1].start() if index + 1 < len(headings) else len(content)].strip(),
+        )
+        for index, heading in enumerate(headings)
+    ]
+
+
+def resolve_bundle_reference(reference: str) -> Path:
+    """Resolve a bundle-relative reference without allowing it to escape the bundle."""
+    bundle_root = BUNDLE_ROOT.resolve()
+    reference_path = (bundle_root / reference).resolve()
+    try:
+        reference_path.relative_to(bundle_root)
+    except ValueError as error:
+        raise ValueError(f"reference escapes the skill bundle: {reference}") from error
+    return reference_path
+
+
+def test_evidence_sections_have_substantive_case_specific_bodies() -> None:
+    for evidence_path in (BASELINE_PATH, RESULTS_PATH):
+        sections = parse_evidence_sections(evidence_path)
+        assert all(len(section.body.split()) >= 20 for section in sections)
+        assert all(len(re.findall(r"[.!?](?:\s|$)", section.body)) >= 2 for section in sections)
+        assert len({section.body for section in sections}) == len(sections)
+
+
+def test_bundle_reference_rejects_a_parent_directory_escape() -> None:
+    with pytest.raises(ValueError, match="escapes the skill bundle"):
+        resolve_bundle_reference("../outside.md")
 
 
 def test_skill_eval_artifacts_are_complete_and_reachable() -> None:
@@ -89,11 +129,11 @@ def test_skill_eval_artifacts_are_complete_and_reachable() -> None:
 
         covered_topics.update(case["topics"])
         for reference in case["expected_references"]:
-            reference_path = BUNDLE_ROOT / reference
+            reference_path = resolve_bundle_reference(reference)
             assert reference_path.is_file(), f"{case['id']} references missing bundle file: {reference}"
 
     assert REQUIRED_TOPICS <= covered_topics
     for evidence_path in (BASELINE_PATH, RESULTS_PATH):
-        section_ids = markdown_case_section_ids(evidence_path)
+        section_ids = [section.case_id for section in parse_evidence_sections(evidence_path)]
         assert len(section_ids) == len(set(section_ids)), f"duplicate case section in {evidence_path}"
         assert set(section_ids) == case_ids
