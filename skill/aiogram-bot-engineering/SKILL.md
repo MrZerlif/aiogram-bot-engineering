@@ -17,6 +17,7 @@ Compatibility baseline: Python 3.10+, aiogram 3.30.0, aiogram-dialog 2.6.0, and 
 | Server-side Mini App `initData` validation or launch boundary | [Mini Apps](references/mini-apps.md) |
 | Telegram Stars, physical/offline payments, external checkout, or fulfillment | [payments](references/payments.md) |
 | aiohttp webhooks, polling/webhook operation, shutdown, logging, or production rollout | [deployment](references/deployment.md) |
+| A complete aiogram-dialog example | [full dialog example](examples/dialog-bot.py) |
 
 Prefer native aiogram APIs; use aiogram-dialog for multi-screen, stateful interaction and native keyboards only for simple single-screen actions. Do not mix frameworks or use raw Bot API HTTP calls. Keep Mini App frontend and MTProto work outside this skill's implementation boundary.
 
