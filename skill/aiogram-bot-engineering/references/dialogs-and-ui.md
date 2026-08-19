@@ -6,6 +6,21 @@ It owns the dialog stack and lets each `Window` describe one state. Use native
 aiogram keyboards only for a small, single-screen action; do not rebuild a
 multi-window flow out of callback handlers.
 
+## State and UI choice
+
+| Need | Choose |
+| --- | --- |
+| One action or screen | Handler with a native keyboard |
+| Short, linear input | Native FSM |
+| Isolated multi-step flow with lifecycle and history | Native Scenes |
+| Rich widget-driven UI, pagination, a dialog stack, or nested flows | aiogram-dialog |
+| Complex browser UI | Mini App |
+
+aiogram Scenes support lifecycle hooks, history, `back()`, and `goto()`, but
+they are experimental in aiogram 3.30.0 and may change. Prefer them only for
+the isolated-flow case above; use aiogram-dialog when the UI itself needs to
+own widgets, windows, or a dialog stack.
+
 ## Composition and data boundaries
 
 Model a feature as a `StatesGroup`, then compose its `Dialog` from `Window`
@@ -25,7 +40,10 @@ class CatalogSG(StatesGroup):
     details = State()
 
 
-catalog_dialog = Dialog(Window(Const("Catalog"), state=CatalogSG.browse))
+catalog_dialog = Dialog(
+    Window(Const("Catalog"), state=CatalogSG.browse),
+    Window(Const("Catalog details"), state=CatalogSG.details),
+)
 
 dp = Dispatcher()
 dp.include_router(catalog_dialog)
@@ -123,8 +141,8 @@ dp.errors.register(recover_dialog, ExceptionTypeFilter(UnknownState))
 
 Use `Style` from the style module, not the keyboard module. `StyleCase` is the
 conditional variant when a getter determines the style; use plain `Style` for
-one fixed appearance. This is a verified aiogram 3.30.0 / aiogram-dialog 2.6.0
-construction:
+one fixed appearance. This construction is version-targeted to aiogram 3.30.0
+and aiogram-dialog 2.6.0:
 
 ```python
 from aiogram.enums import ButtonStyle

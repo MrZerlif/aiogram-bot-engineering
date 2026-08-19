@@ -12,7 +12,7 @@ Compatibility baseline: Python 3.10+, aiogram 3.30.0, aiogram-dialog 2.6.0, and 
 | Request | Read |
 | --- | --- |
 | Routers, Dispatcher, configuration, middleware, FSM, storage, or polling decisions | [architecture](references/architecture.md) |
-| Multi-window menus, wizards, dynamic lists, pagination, styled buttons, or custom emoji | [dialogs and UI](references/dialogs-and-ui.md) |
+| Native FSM or Scenes, multi-window menus, wizards, dynamic lists, pagination, styled buttons, or custom emoji | [dialogs and UI](references/dialogs-and-ui.md) |
 | Structured native Rich Messages, media bindings, custom emoji, or streaming drafts | [rich messages](references/rich-messages.md) |
 | Server-side Mini App `initData` validation or launch boundary | [Mini Apps](references/mini-apps.md) |
 | Telegram Stars, physical/offline payments, external checkout, or fulfillment | [payments](references/payments.md) |

@@ -1,4 +1,4 @@
 interface:
   display_name: "Aiogram Bot Engineering"
   short_description: "Build production Telegram bots with aiogram"
-  default_prompt: "Use $aiogram-bot-engineering to design or implement this Telegram bot with verified aiogram patterns."
+  default_prompt: "Use $aiogram-bot-engineering to design or implement this Telegram bot with version-targeted aiogram patterns."

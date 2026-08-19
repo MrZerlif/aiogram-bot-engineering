@@ -5,23 +5,64 @@ Frontend SDK calls, UI, and browser-side state are out of scope for this
 workflow; use another workflow for them. Treat every browser-supplied value,
 including `user` and its `id`, as untrusted until the backend validates it.
 
-## Launch boundary
+## Launch flows
 
-Expose a Mini App only through a bot-controlled launch surface, such as an
-inline or reply keyboard button with a `WebAppInfo` URL. The URL identifies the
-application, but it is not authentication. Send the received `initData` to the
-backend over the application's authenticated transport; the backend must
-validate it before it loads an account, accepts an action, or makes an
-authorization decision.
+The launch URL identifies the application; it is not authentication. Choose the
+flow by the launch surface rather than assuming every Mini App has the same
+return path.
+
+### Reply keyboard: `sendData` to the bot
+
+A reply `KeyboardButton` can return a small result directly to the bot with
+`Telegram.WebApp.sendData`. Telegram delivers it as `message.web_app_data`.
+This flow does **not** make a signed `initData` or identity claim available for
+the bot to trust: treat the returned data as untrusted action input and do not
+use it to authenticate a backend session.
 
 ```python
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
+from aiogram import F, Router
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
 
-launch_keyboard = ReplyKeyboardMarkup(
+reply_launch_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Open account", web_app=WebAppInfo(url=MINI_APP_URL))]
+        [KeyboardButton(text="Choose dates", web_app=WebAppInfo(url=MINI_APP_URL))]
     ],
     resize_keyboard=True,
+)
+
+router = Router()
+
+
+@router.message(F.web_app_data)
+async def receive_reply_keyboard_result(message: Message) -> None:
+    payload = message.web_app_data.data
+    # Validate the expected action data before using it; it is not initData.
+    await message.answer(f"Received {len(payload)} bytes of selection data.")
+```
+
+The frontend calls `Telegram.WebApp.sendData(payload)`. It is available only to
+Mini Apps launched from a reply keyboard button, and Telegram closes the Mini
+App after sending the service message.
+
+### Inline, menu, main, or direct launch: validate `initData` at the backend
+
+For an inline button, menu button, Main Mini App, or direct launch, the
+frontend sends the raw `Telegram.WebApp.initData` to the backend over the
+application's transport. The backend validates its HMAC and age, then parses
+the validated identity and performs authorization for the requested operation.
+Do not use `initDataUnsafe`, a frontend-provided user id, or a launch URL as a
+substitute for this validation.
+
+Use an inline button as the canonical signed-`initData`-compatible launch
+surface:
+
+```python
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+
+signed_init_data_launch = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Open account", web_app=WebAppInfo(url=MINI_APP_URL))]
+    ]
 )
 ```
 
@@ -97,7 +138,9 @@ validated Telegram id only as an identity claim. Fetch the server-side account,
 order, or entitlement, then authorize the requested operation there. Never
 trust a client-supplied `user`, `id`, price, role, order, or entitlement merely
 because it appears in the Mini App request. Bind an application session to the
-validated identity and perform authorization for each protected action.
+validated identity and perform authorization for each protected action. This
+identity-validation flow applies to the signed-`initData` launch surfaces above,
+not to a reply-keyboard `sendData` result.
 
 An identity field is untrusted before validation; server-side authorization is
 required after validation and remains separate from authentication.
