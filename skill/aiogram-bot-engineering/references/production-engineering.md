@@ -60,9 +60,11 @@ database operation, and queued job. Include safe identifiers and decision
 outcomes, but redact bot tokens, webhook secrets, `initData`, payment details,
 and personal content. Export metrics for intake, latency, error classes, queue
 depth/age, retries, and idempotency conflicts; add traces around update, query,
-and job boundaries. Alert on sustained error rates, failed readiness, growing
-dead letters, migration failure, and queue latency that breaches the service
-objective.
+and job boundaries. Persist trace context in outbox or queue metadata and
+propagate it into worker spans, so background processing is linked to the
+originating update rather than starting an unrelated trace. Alert on sustained
+error rates, failed readiness, growing dead letters, migration failure, and
+queue latency that breaches the service objective.
 
 Build a small Docker image with a non-root runtime user and only the runtime
 dependencies. On shutdown, stop accepting new updates, mark readiness false,

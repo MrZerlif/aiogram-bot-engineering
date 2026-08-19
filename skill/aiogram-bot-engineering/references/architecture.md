@@ -39,6 +39,9 @@ records; persist those in the domain's durable store. FSM storage records the
 conversation's transient state, while durable business state has its own
 repository, schema, and transaction boundary. See [production engineering](production-engineering.md)
 when that boundary needs PostgreSQL, concurrency, or lifecycle guidance.
+Keep per-user progress in `FSMContext` through the configured storage; never
+track it in module-level dictionaries, mutable handler globals, or singleton
+objects shared by multiple updates.
 
 Code should depend on the `BaseStorage` abstraction. `MemoryStorage` is useful
 only for local development and tests: it loses state when a process restarts

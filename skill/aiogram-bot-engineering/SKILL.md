@@ -29,5 +29,10 @@ browser UI. Do not mix frameworks or use raw Bot API HTTP calls. Keep Mini App
 frontend and MTProto work outside this skill's implementation boundary.
 
 Treat tokens as secrets from environment variables or a secret manager. Verify Mini App identity and authorization server-side. Treat callback data as an identifier: fetch referenced objects and authorize actions server-side. Log unexpected exceptions and let centralized error handling receive them. Use persistent production FSM/session storage. Fulfill payments idempotently only after confirmed success. Never imply live deployment, payment-provider mutation, or other external action without authorization.
+At a webhook boundary, reject an invalid secret before dispatch, return success
+only after the authenticated update reaches the chosen acceptance boundary, and
+never log the secret header or bot token. For payments, persist the stable
+Telegram charge identifier and any nonempty provider identifier under the
+appropriate uniqueness constraints.
 
 Run tests proportional to the change before claiming completion.

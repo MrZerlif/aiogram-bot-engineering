@@ -97,6 +97,14 @@ to aiohttp so startup and shutdown are coordinated. Configure the web server to
 stop accepting new work, allow in-flight work to finish, and close application
 resources for a graceful shutdown.
 
+Reject a missing or invalid secret header before parsing or dispatching the
+update, and never return a successful acknowledgement for a rejected request.
+Return success only after the authenticated update has been accepted by the
+chosen processing boundary; if business work continues asynchronously, make
+that boundary durable before acknowledging when loss is unacceptable. Log safe
+request and correlation metadata, but never log `BOT_TOKEN`, the webhook secret
+or its header value, or an unredacted update body.
+
 Do not run polling alongside this webhook: the modes are mutually exclusive.
 Expose liveness separately from readiness: liveness answers whether the process
 needs restarting, while readiness stays false until required dependencies (for
