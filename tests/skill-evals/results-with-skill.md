@@ -1,6 +1,12 @@
 # Results with skill — recorded treatment run
 
-Independent final treatment rerun collected 2026-08-19 after gap-driven skill revision, reading SKILL.md and only its routed resources.
+Run `treatment-20260819-r3`, produced by `/root/eval_treatment_round3` on
+2026-08-19 after the gap-driven skill revision. The runner received the ten
+prompt texts directly, read `SKILL.md` and a shared batch of its routed
+resources, and confirmed it did not read eval rubrics, tests, README, prior
+results, git history, or web content. The exact deployed model revision was not
+exposed. See [`retrieval-trace.json`](retrieval-trace.json) for the self-reported
+read set and [`run-manifest.json`](run-manifest.json) for protocol and hashes.
 
 ## fsm-linear-flow
 

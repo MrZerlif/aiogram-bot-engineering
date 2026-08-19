@@ -1,6 +1,10 @@
 # Baseline without skill — recorded control run
 
-Independent control run collected 2026-08-19 without reading the repository skill or rubrics.
+Run `control-20260819-r1`, produced by `/root/eval_baseline_run` on
+2026-08-19. The runner received the ten prompt texts directly and confirmed it
+did not read the repository skill, rubrics, tests, README, result artifacts, or
+web content. The exact deployed model revision was not exposed. See
+[`run-manifest.json`](run-manifest.json) for the recorded protocol and hashes.
 
 ## fsm-linear-flow
 

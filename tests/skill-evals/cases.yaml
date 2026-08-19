@@ -21,7 +21,7 @@
     "id": "dialog-widget-ui",
     "prompt": "Create a settings screen with a toggle, pagination, and a confirm action using an aiogram dialog UI.",
     "topics": ["dialogs", "ui"],
-    "expected_references": ["SKILL.md", "references/dialogs-and-ui.md", "examples/dialog-bot.py"],
+    "expected_references": ["SKILL.md", "references/dialogs-and-ui.md"],
     "retrieval_assertions": ["Routes to the dedicated dialog and widget reference rather than generic inline keyboard advice."],
     "application_assertions": ["Uses dialog windows and widgets for toggle and pagination state.", "Keeps callback handling inside the dialog interaction model."],
     "gap_assertions": ["Avoids manually editing one message with ad-hoc callback-data parsing for every widget."]

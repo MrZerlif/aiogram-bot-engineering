@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-19T20:50:02+03:00",
+  "source": {
+    "kind": "originating_runner_self_report_from_tool_history",
+    "platform_signed": false,
+    "note": "Captured after the recorded runs. The control runner confirmed it read no repository context. The treatment runner reported one shared ordered context opened in two batches; exact per-case read attribution was not distinguishable."
+  },
+  "control": {
+    "run_id": "control-20260819-r1",
+    "canonical_task": "/root/eval_baseline_run",
+    "granularity": "none",
+    "ordered_paths": [],
+    "attribution_limit": "The control condition was prohibited from reading the repository skill, eval rubrics, and repository documentation.",
+    "case_paths": {
+      "fsm-linear-flow": [],
+      "scenes-isolated-flow": [],
+      "dialog-widget-ui": [],
+      "mini-app-launch-security": [],
+      "callback-authorization": [],
+      "payment-lifecycle": [],
+      "webhook-secret": [],
+      "background-jobs": [],
+      "testing-strategy": [],
+      "production-uow-observability": []
+    }
+  },
+  "treatment": {
+    "run_id": "treatment-20260819-r3",
+    "canonical_task": "/root/eval_treatment_round3",
+    "granularity": "shared_batch",
+    "ordered_paths": [
+      "SKILL.md",
+      "references/architecture.md",
+      "references/dialogs-and-ui.md",
+      "references/mini-apps.md",
+      "references/payments.md",
+      "references/deployment.md",
+      "references/testing.md",
+      "references/production-engineering.md"
+    ],
+    "attribution_limit": "Resources were opened in two batches before drafting. Each case had this shared context available; these repeated case_paths do not prove a separate per-case read event.",
+    "case_paths": {
+      "fsm-linear-flow": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "scenes-isolated-flow": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "dialog-widget-ui": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "mini-app-launch-security": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "callback-authorization": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "payment-lifecycle": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "webhook-secret": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "background-jobs": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "testing-strategy": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ],
+      "production-uow-observability": [
+        "SKILL.md",
+        "references/architecture.md",
+        "references/dialogs-and-ui.md",
+        "references/mini-apps.md",
+        "references/payments.md",
+        "references/deployment.md",
+        "references/testing.md",
+        "references/production-engineering.md"
+      ]
+    }
+  }
+}

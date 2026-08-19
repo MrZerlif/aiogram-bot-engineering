@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-19T21:01:33+03:00",
+  "protocol": {
+    "prompt_source": "tests/skill-evals/cases.yaml; prompt strings were copied verbatim into each runner task, and runners did not read the case file.",
+    "scoring_source": "tests/skill-evals/assertion-results.json",
+    "independence_scope": "Control, treatment, and evaluator were separate Codex collaboration tasks in one recorded session.",
+    "audit_limitations": [
+      "Runner identities and retrieval paths are self-reported from task context; they are not platform-signed execution logs.",
+      "The exact deployed model revision and sampling configuration were not exposed to the runners.",
+      "Stochastic outputs are not expected to reproduce byte-for-byte; hashes bind the committed artifacts actually assessed.",
+      "Treatment retrieval used a shared batch context, so path coverage is auditable but a distinct read event per case is not established.",
+      "CI validates artifact structure, hashes, paths, evidence excerpts, and arithmetic; it does not invoke a model or regenerate outputs."
+    ],
+    "post_run_annotation": "Run IDs and manifest links were added above the raw case sections after collection; case response bodies were not rewritten."
+  },
+  "skill_snapshot": {
+    "commit": "67d5f9d0564c2251250fe71951901ca011f356ad",
+    "bundle_path": "skill/aiogram-bot-engineering",
+    "bundle_sha256": "fe7c4a305d88d2f6067b4bdefb1c6595930e7ed6de4e00e064a220488b5f0cb2",
+    "note": "This commit contains the bundle content available to the final treatment runner."
+  },
+  "artifacts": {
+    "cases": {
+      "path": "tests/skill-evals/cases.yaml",
+      "sha256": "2730ad58125c181e3f2bace0422374951d17b021c4374bd69382f424198fef10"
+    },
+    "control_output": {
+      "path": "tests/skill-evals/baseline-without-skill.md",
+      "sha256": "ef1fc6012345d150525c2664deabb6e9f000020bf09a4ec730a80e740611305c"
+    },
+    "treatment_output": {
+      "path": "tests/skill-evals/results-with-skill.md",
+      "sha256": "a3a7853044f61015d4fc7b95557b35d117961d8a4e6f9ee99f5dc56e79b1e919"
+    },
+    "retrieval_trace": {
+      "path": "tests/skill-evals/retrieval-trace.json",
+      "sha256": "abb559a945aca679f4ed335bcc7ec8b5eba670e0450cefc31893647aa3c1f810"
+    },
+    "assertion_results": {
+      "path": "tests/skill-evals/assertion-results.json",
+      "sha256": "82b79c45effc668ca94a5fd6bd5a82fdb806d5bf9731a1d1f32c6cd6bf0332c7"
+    }
+  },
+  "runs": [
+    {
+      "condition": "control",
+      "run_id": "control-20260819-r1",
+      "collected_on": "2026-08-19",
+      "runner": {
+        "system": "Codex collaboration subagent",
+        "canonical_task": "/root/eval_baseline_run",
+        "model_family": "Codex (GPT-5 family per the session system prompt)",
+        "exact_model_revision": null,
+        "revision_disclosure": "The exact deployed model identifier and revision were not visible to the runner."
+      },
+      "allowed_context": [
+        "Ten prompt texts supplied directly in the task payload",
+        "General pretrained model knowledge"
+      ],
+      "prohibited_context": [
+        "Repository skill bundle",
+        "Eval cases and rubrics",
+        "README and tests",
+        "Treatment or assessment artifacts",
+        "Web content"
+      ],
+      "network_access": false,
+      "output_path": "tests/skill-evals/baseline-without-skill.md",
+      "retrieval_run_id": "control-20260819-r1"
+    },
+    {
+      "condition": "treatment",
+      "run_id": "treatment-20260819-r3",
+      "collected_on": "2026-08-19",
+      "runner": {
+        "system": "Codex collaboration subagent",
+        "canonical_task": "/root/eval_treatment_round3",
+        "model_family": "Codex (GPT-5 family per the session system prompt)",
+        "exact_model_revision": null,
+        "revision_disclosure": "The exact deployed model identifier and revision were not visible to the runner."
+      },
+      "allowed_context": [
+        "Ten prompt texts supplied directly in the task payload",
+        "skill/aiogram-bot-engineering/SKILL.md",
+        "Local resources routed from SKILL.md"
+      ],
+      "prohibited_context": [
+        "Eval cases and rubrics",
+        "README and tests",
+        "Prior result and assessment artifacts",
+        "Git history and reports",
+        "Web content"
+      ],
+      "network_access": false,
+      "output_path": "tests/skill-evals/results-with-skill.md",
+      "retrieval_run_id": "treatment-20260819-r3",
+      "skill_commit": "67d5f9d0564c2251250fe71951901ca011f356ad"
+    },
+    {
+      "condition": "evaluator",
+      "run_id": "evaluator-20260819-r4",
+      "collected_on": "2026-08-19",
+      "runner": {
+        "system": "Codex collaboration subagent",
+        "canonical_task": "/root/eval_assertion_judge",
+        "model_family": "Codex (GPT-5 family per the session system prompt)",
+        "exact_model_revision": null,
+        "revision_disclosure": "The exact deployed model identifier and revision were not exposed to the runner."
+      },
+      "allowed_context": [
+        "tests/skill-evals/cases.yaml",
+        "Recorded control and treatment outputs",
+        "tests/skill-evals/retrieval-trace.json"
+      ],
+      "prohibited_context": [
+        "Skill bundle",
+        "Prior evaluation summary",
+        "README and tests",
+        "Git history and reports",
+        "Web content"
+      ],
+      "network_access": false,
+      "output_path": "tests/skill-evals/assertion-results.json"
+    }
+  ]
+}

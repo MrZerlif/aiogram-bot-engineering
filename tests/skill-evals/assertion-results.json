@@ -1,0 +1,974 @@
+{
+  "schema_version": 1,
+  "run_id": "evaluator-20260819-r4",
+  "runner": {
+    "canonical_task": "/root/eval_assertion_judge",
+    "system": "Codex collaboration subagent",
+    "model_family": "GPT-5/Codex",
+    "exact_model_revision": null,
+    "revision_disclosure": "Exact deployed model revision is not exposed to the runner."
+  },
+  "method": "Each condition is scored at assertion level. Retrieval passes only when every expected reference appears in that condition's retrieval-trace ordered_paths; output prose is not used to infer retrieval. Application and gap assertions pass only when the corresponding case output contains explicit support, recorded as one exact contiguous excerpt. Treatment retrieval uses the shared-batch self-reported trace and is not interpreted as a per-case platform-signed read event.",
+  "cases": [
+    {
+      "id": "fsm-linear-flow",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the state-management guidance for a linear workflow.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so neither expected reference is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses StatesGroup and one state per awaited answer.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Model the conversation as a `StatesGroup` with `name`, `email`, and `confirmation` states."
+              }
+            },
+            {
+              "assertion": "Registers a global cancellation path that clears FSM state.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Register a `/cancel` and cancel-button handler that applies while any registration state is active. It should clear the FSM data, remove or replace obsolete keyboards, and acknowledge callback queries."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects a handler-only design that stores progress in module globals.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Store normalized values in `FSMContext`, not module-level variables."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the state-management guidance for a linear workflow.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains both expected references: SKILL.md and references/architecture.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses StatesGroup and one state per awaited answer.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Define a `Registration` `StatesGroup` with `name`, `email`, and `age` states, and put its handlers in a feature `Router`."
+              }
+            },
+            {
+              "assertion": "Registers a global cancellation path that clears FSM state.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Register a `/cancel` handler, plus a cancel callback if buttons are shown, so it matches every registration state. It should acknowledge callbacks, clear the FSM, and return a neutral confirmation; cancellation must not create a user record."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects a handler-only design that stores progress in module globals.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use persistent production FSM storage and event isolation, not module-level dictionaries, so restarts and concurrent answers do not corrupt progress."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "scenes-isolated-flow",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds the dialogs-and-ui guidance that distinguishes Scenes from a simple FSM and covers lifecycle, history, and back navigation.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Chooses a scene for navigation-heavy onboarding with explicit entry, exit, and back behavior.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Represent onboarding as a scene or wizard with explicit entry, step, back, completion, and exit handlers."
+              }
+            },
+            {
+              "assertion": "Scopes state and collected data to the Telegram user and chat context.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Configure FSM storage so the key includes at least bot, chat, and user identifiers; this is especially important in group chats where several users share one chat."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Calls out shared in-memory dictionaries as unsafe for isolation and restart recovery.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use Redis or another durable FSM backend in a multi-process deployment, with an appropriate TTL, and never store current-user data in globals or singleton scene objects."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds the dialogs-and-ui guidance that distinguishes Scenes from a simple FSM and covers lifecycle, history, and back navigation.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/architecture.md, and references/dialogs-and-ui.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Chooses a scene for navigation-heavy onboarding with explicit entry, exit, and back behavior.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Model onboarding as an aiogram Scene because it needs an isolated lifecycle and navigation history, while noting that Scenes are experimental in aiogram 3.30.0. Give entry, profile, and review steps explicit scene states. An entry hook may initialize onboarding metadata; navigation should use the scene wizard’s `goto()` and `back()` operations rather than encoding the current screen in callback data. An exit hook should perform bounded cleanup, while successful completion should call the application service first and then leave the scene."
+              }
+            },
+            {
+              "assertion": "Scopes state and collected data to the Telegram user and chat context.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Configure the storage key strategy so the intended user/chat pair owns the session, and never keep drafts in a mutable global, router singleton, or shared getter."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Calls out shared in-memory dictionaries as unsafe for isolation and restart recovery.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Store draft answers only in the user’s `FSMContext` through a persistent `BaseStorage`. Configure the storage key strategy so the intended user/chat pair owns the session, and never keep drafts in a mutable global, router singleton, or shared getter."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dialog-widget-ui",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the dedicated dialog and widget reference rather than generic inline keyboard advice.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so neither expected reference is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses dialog windows and widgets for toggle and pagination state.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Build one `Dialog` window whose getter returns persisted settings plus the current page. Use a `Checkbox` for the boolean setting, a paginated `ScrollingGroup` or paged `Select` for the list, navigation controls, and a `Button` for confirmation."
+              }
+            },
+            {
+              "assertion": "Keeps callback handling inside the dialog interaction model.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "The checkbox callback updates only dialog-local draft data and re-renders; page navigation changes the dialog page without mutating the saved settings."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Avoids manually editing one message with ad-hoc callback-data parsing for every widget.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Build one `Dialog` window whose getter returns persisted settings plus the current page. Use a `Checkbox` for the boolean setting, a paginated `ScrollingGroup` or paged `Select` for the list, navigation controls, and a `Button` for confirmation. Give every widget a stable, unique ID. The checkbox callback updates only dialog-local draft data and re-renders; page navigation changes the dialog page without mutating the saved settings."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the dedicated dialog and widget reference rather than generic inline keyboard advice.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains both expected references: SKILL.md and references/dialogs-and-ui.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses dialog windows and widgets for toggle and pagination state.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Define a `SettingsSG` state and a `Dialog` containing a `Window` with a `Checkbox` or toggle control, a bounded `ScrollingGroup`/pager for the settings list, and a confirm `Button`."
+              }
+            },
+            {
+              "assertion": "Keeps callback handling inside the dialog interaction model.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Toggle callbacks may update `dialog_data` as a draft, but they must not trust a setting name or value supplied by callback data. Confirm should reload the allowed settings server-side, authorize the actor, validate the draft, and persist all changes atomically through a service. Only then should it call `done()` or render success."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Avoids manually editing one message with ad-hoc callback-data parsing for every widget.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Define a `SettingsSG` state and a `Dialog` containing a `Window` with a `Checkbox` or toggle control, a bounded `ScrollingGroup`/pager for the settings list, and a confirm `Button`."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mini-app-launch-security",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds the Mini App reference and its init-data validation guidance.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so neither expected reference is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses a WebApp launch button and forwards initData to the backend.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Send an inline keyboard button containing `WebAppInfo` with an HTTPS dashboard URL. The Mini App should pass Telegram’s initialization data to its backend immediately."
+              }
+            },
+            {
+              "assertion": "Verifies Telegram init-data integrity server-side before trusting user identity.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "On the server, validate the `initData` signature according to Telegram’s HMAC procedure using the bot token, compare the computed hash in constant time, reject an old `auth_date`, and optionally track a nonce or data hash briefly to reduce replay. Parse the user identity only after successful validation; never accept a user ID, role, or account ID merely because JavaScript supplied it."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects trusting client-supplied user IDs or treating WebView URL parameters as authentication.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Parse the user identity only after successful validation; never accept a user ID, role, or account ID merely because JavaScript supplied it."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds the Mini App reference and its init-data validation guidance.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains both expected references: SKILL.md and references/mini-apps.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Uses a WebApp launch button and forwards initData to the backend.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Launch the dashboard from an inline `WebAppInfo` button, which supports the signed `initData` flow. The URL only locates the Mini App; it is not proof of identity. The frontend should send the raw `Telegram.WebApp.initData` to the HTTPS backend."
+              }
+            },
+            {
+              "assertion": "Verifies Telegram init-data integrity server-side before trusting user identity.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "One server-side validator should parse it strictly, reject duplicate or missing fields, remove `hash`, sort the remaining `key=value` lines, and verify the documented HMAC using a secret derived from the bot token. Use `hmac.compare_digest`, enforce an application-chosen short maximum age, and reject both expired and future `auth_date` values."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects trusting client-supplied user IDs or treating WebView URL parameters as authentication.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "The URL only locates the Mini App; it is not proof of identity."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "callback-authorization",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes to callback handling and production authorization guidance.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Loads the report server-side and checks the actor role before mutation.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "When clicked, always answer the callback promptly, then obtain the actor’s moderator status from an authoritative source such as current chat membership or the application role table. Hiding the button from ordinary users improves UX but is not authorization. Reject unauthorized actors with a neutral alert and record the attempt without exposing sensitive report details.\n\nLoad the report in a transaction using a row lock or conditional update such as `WHERE status = 'pending' AND version = :expected`."
+              }
+            },
+            {
+              "assertion": "Treats callback data as an opaque identifier and handles an already-resolved report idempotently.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Encode only a report identifier and expected version in a structured callback payload; do not encode “is moderator” or approval state as trusted facts. When clicked, always answer the callback promptly, then obtain the actor’s moderator status from an authoritative source such as current chat membership or the application role table. Hiding the button from ordinary users improves UX but is not authorization. Reject unauthorized actors with a neutral alert and record the attempt without exposing sensitive report details.\n\nLoad the report in a transaction using a row lock or conditional update such as `WHERE status = 'pending' AND version = :expected`. If no row changes, the button is stale, the report is missing, or another moderator already acted; return an “already handled” response and refresh the message. On success, record approver, timestamp, and the new version, commit, and then edit the UI. Use an idempotency key based on report and action so duplicate deliveries are harmless."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects relying on the visible button, client role fields, or callback payload as authorization.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Encode only a report identifier and expected version in a structured callback payload; do not encode “is moderator” or approval state as trusted facts. When clicked, always answer the callback promptly, then obtain the actor’s moderator status from an authoritative source such as current chat membership or the application role table. Hiding the button from ordinary users improves UX but is not authorization."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes to callback handling and production authorization guidance.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/architecture.md, and references/production-engineering.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Loads the report server-side and checks the actor role before mutation.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "The callback handler should parse defensively, load the report from durable storage, resolve the actor’s current moderator permission server-side, and check that the report is still pending and the version belongs to the displayed action."
+              }
+            },
+            {
+              "assertion": "Treats callback data as an opaque identifier and handles an already-resolved report idempotently.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use a native inline keyboard for this single action. Encode only a compact action plus `report_id` and, if useful, an expected report version in typed `CallbackData`; do not encode the moderator role, approval state, or trusted snapshot. The callback handler should parse defensively, load the report from durable storage, resolve the actor’s current moderator permission server-side, and check that the report is still pending and the version belongs to the displayed action.\n\nPerform approval in one transaction with a conditional update or row lock. The invariant should require both “actor is authorized” and “status is pending”; a uniqueness/idempotency key should make a retried callback return the existing outcome rather than approve twice. A missing report, ordinary user, revoked moderator, mismatched version, or already-resolved report is denied without mutation."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects relying on the visible button, client role fields, or callback payload as authorization.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Encode only a compact action plus `report_id` and, if useful, an expected report version in typed `CallbackData`; do not encode the moderator role, approval state, or trusted snapshot."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "payment-lifecycle",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds the payment lifecycle reference, including pre-checkout and successful-payment handling.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Answers pre-checkout queries promptly and fulfills only after successful_payment.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "In the `pre_checkout_query` handler, reload that order and verify product, price, currency, buyer eligibility, and pending status; answer within Telegram’s deadline. Do not grant access at pre-checkout, because it is only permission to attempt payment. Fulfillment begins from `successful_payment`, after verifying its invoice payload and monetary fields against the stored order."
+              }
+            },
+            {
+              "assertion": "Persists the stable Telegram charge identifier, plus a provider identifier when present, to make fulfillment idempotent.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Store both Telegram and provider charge IDs under unique constraints, mark the order paid once, extend the subscription deterministically, and insert an outbox event in the same transaction. Duplicate successful-payment updates then return the existing result."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects granting access when an invoice is sent or when pre-checkout succeeds.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Do not grant access at pre-checkout, because it is only permission to attempt payment. Fulfillment begins from `successful_payment`, after verifying its invoice payload and monetary fields against the stored order."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds the payment lifecycle reference, including pre-checkout and successful-payment handling.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/payments.md, and references/production-engineering.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Answers pre-checkout queries promptly and fulfills only after successful_payment.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "In `pre_checkout_query`, reload it and compare status, payer policy, currency, and total, denying invalid requests within Telegram’s documented ten-second window.\n\nFulfillment belongs only in `successful_payment`, never in pre-checkout or a client return."
+              }
+            },
+            {
+              "assertion": "Persists the stable Telegram charge identifier, plus a provider identifier when present, to make fulfillment idempotent.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Reload and revalidate the order, then in one database transaction record the unique `telegram_payment_charge_id`, advance payment state, and grant the subscription. Persist a provider charge ID only when nonempty. Replayed success updates must return the recorded result."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects granting access when an invoice is sent or when pre-checkout succeeds.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Fulfillment belongs only in `successful_payment`, never in pre-checkout or a client return."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "webhook-secret",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes to deployment and webhook operational guidance.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Configures a secret token and verifies the incoming Telegram secret-token header.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Expose a single POST endpoint behind a TLS-terminating reverse proxy and configure `setWebhook` with a high-entropy `secret_token`. For every request, compare Telegram’s secret-token header to the configured value before parsing or dispatching the update, using a constant-time comparison where practical."
+              }
+            },
+            {
+              "assertion": "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use HTTPS with valid certificates, restrict the endpoint to POST and the expected content type, cap body size and request duration, and apply conservative rate limits. A random URL path and Telegram IP allowlisting can add defense in depth, but neither replaces the secret header; IP rules must account for trusted-proxy configuration so clients cannot spoof forwarding headers. Return success quickly after safely accepting an authenticated update, while durable processing handles longer work."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects an unauthenticated public POST endpoint and logging the bot token or secret header.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Missing or incorrect secrets should receive an immediate 401 or 403 and must never reach bot middleware. Keep the secret in a secret manager, separate from the bot token, and support rotation by updating Telegram and the deployment deliberately."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes to deployment and webhook operational guidance.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/deployment.md, and references/production-engineering.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Configures a secret token and verifies the incoming Telegram secret-token header.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Register the webhook with `Bot.set_webhook(..., secret_token=secret, allowed_updates=dp.resolve_used_update_types())`.\n\nUse aiogram’s aiohttp `SimpleRequestHandler` with the same secret and `setup_application` for lifecycle wiring. Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement."
+              }
+            },
+            {
+              "assertion": "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Expose one stable HTTPS webhook and do not run polling for the same bot. Generate a high-entropy secret once in a trusted administration context, store it separately from `BOT_TOKEN` in an environment variable or secret manager, and reject blank, placeholder, malformed, or weak values at startup. Register the webhook with `Bot.set_webhook(..., secret_token=secret, allowed_updates=dp.resolve_used_update_types())`.\n\nUse aiogram’s aiohttp `SimpleRequestHandler` with the same secret and `setup_application` for lifecycle wiring. Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement. Return success only after an authenticated update reaches the selected acceptance boundary."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects an unauthenticated public POST endpoint and logging the bot token or secret header.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement. Return success only after an authenticated update reaches the selected acceptance boundary. If work continues asynchronously and loss is unacceptable, that boundary is a committed inbox/outbox or durable queue record, not an in-memory task. Never log the secret header, bot token, or raw update."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "background-jobs",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds the production guidance for durable asynchronous work.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Commits the order transaction before enqueueing or recording durable follow-up work.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use a transactional outbox. In the same database transaction that changes the order to `paid`, insert separate durable jobs for customer notification and report generation, each with a stable idempotency key such as `order_id + job_type`. The update handler commits this small transaction and responds; it does not render reports or call slow downstream services."
+              }
+            },
+            {
+              "assertion": "Uses an idempotent worker boundary with retries and observable failures.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Workers acknowledge a job only after its side effect is complete. They should use bounded exponential backoff with jitter, lease expiry for crashed workers, maximum attempts, and a dead-letter state with alerting. Notification delivery records and generated-report records need unique constraints so redelivery cannot send or create twice; store reports in durable object storage and save their location atomically."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects fire-and-forget create_task work as the only guarantee for a business-critical job.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Use a transactional outbox. In the same database transaction that changes the order to `paid`, insert separate durable jobs for customer notification and report generation, each with a stable idempotency key such as `order_id + job_type`. The update handler commits this small transaction and responds; it does not render reports or call slow downstream services. A dispatcher publishes committed outbox rows to a durable broker, or workers can lease rows directly from the database with `SKIP LOCKED` semantics."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds the production guidance for durable asynchronous work.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/architecture.md, and references/production-engineering.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Commits the order transaction before enqueueing or recording durable follow-up work.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Keep the successful-order handler short by committing the order transition and durable outbox records in the same database transaction. Create separate job records for customer/admin notifications and report generation, each with a stable idempotency key derived from the order and job type. A publisher can move committed outbox entries to a durable queue; acknowledging the update after this durable acceptance point avoids losing work if the process exits immediately afterward."
+              }
+            },
+            {
+              "assertion": "Uses an idempotent worker boundary with retries and observable failures.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Workers should claim jobs with bounded concurrency and backpressure. Before each side effect, check or atomically record its deduplication key so redelivery cannot send the same notification or publish the same report twice. Retry only classified transient failures with bounded exponential backoff and jitter. Permanent validation failures and exhausted retries belong in a dead-letter store with alerts, diagnostic context, and a controlled replay procedure."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects fire-and-forget create_task work as the only guarantee for a business-critical job.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Persist job status rather than relying on `asyncio.create_task`, so restart recovery can resume outstanding work."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "testing-strategy",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the dedicated testing reference.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Separates unit tests for decisions from integration tests for handlers and storage.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Split tests by boundary. Unit-test callback payload encoding/decoding, order state transitions, amount checks, authorization decisions, and keyboard construction with table-driven cases. Handler tests should feed synthetic callback and payment updates through the dispatcher with a fake bot session, then assert callback acknowledgements, message edits, alerts, and database effects."
+              }
+            },
+            {
+              "assertion": "Exercises unauthorized callbacks, duplicate successful payments, and asserted bot responses.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Handler tests should feed synthetic callback and payment updates through the dispatcher with a fake bot session, then assert callback acknowledgements, message edits, alerts, and database effects. Include malformed and forged callback data, an ordinary user, an active moderator, a moderator whose role was revoked, a missing order, and a stale order version.\n\nRun integration tests against the real database engine used in production so transactions, unique constraints, locks, and rollback behavior are exercised. Deliver the same successful-payment update repeatedly and out of order relative to pre-checkout; assert one charge record, one fulfillment transition, and one outbox event."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects only snapshotting handler source or testing a happy path with no update payloads.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Handler tests should feed synthetic callback and payment updates through the dispatcher with a fake bot session, then assert callback acknowledgements, message edits, alerts, and database effects. Include malformed and forged callback data, an ordinary user, an active moderator, a moderator whose role was revoked, a missing order, and a stale order version."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes to the dedicated testing reference.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/testing.md, and references/payments.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Separates unit tests for decisions from integration tests for handlers and storage.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Test application behavior at the smallest useful boundary. Directly call the callback handler with `AsyncMock` callback events for malformed payloads, missing orders, ordinary users, revoked permissions, wrong ownership, stale versions, repeated clicks, and the authorized transition. Assert both repository state and callback acknowledgement; a denied path must make no mutation. Use `Dispatcher.feed_raw_update()` with a fake token when filters, router selection, middleware, or dependency injection matter, without polling or Telegram network access."
+              }
+            },
+            {
+              "assertion": "Exercises unauthorized callbacks, duplicate successful payments, and asserted bot responses.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Directly call the callback handler with `AsyncMock` callback events for malformed payloads, missing orders, ordinary users, revoked permissions, wrong ownership, stale versions, repeated clicks, and the authorized transition. Assert both repository state and callback acknowledgement; a denied path must make no mutation. Use `Dispatcher.feed_raw_update()` with a fake token when filters, router selection, middleware, or dependency injection matter, without polling or Telegram network access.\n\nFor payments, feed the same successful-payment update twice and assert one charge row and one entitlement in the database transaction."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects only snapshotting handler source or testing a happy path with no update payloads.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Directly call the callback handler with `AsyncMock` callback events for malformed payloads, missing orders, ordinary users, revoked permissions, wrong ownership, stale versions, repeated clicks, and the authorized transition. Assert both repository state and callback acknowledgement; a denied path must make no mutation. Use `Dispatcher.feed_raw_update()` with a fake token when filters, router selection, middleware, or dependency injection matter, without polling or Telegram network access."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "production-uow-observability",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds production engineering and testing guidance for a unit-of-work boundary.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Makes the database mutation and outbox record atomic within a unit of work.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Make the handler an orchestration layer around a unit of work. Parse and validate the callback, authenticate the actor, then begin a transaction and load the order with a row lock or optimistic version. Apply a domain transition that only permits `pending -> confirmed`, write the confirmation and audit record, and insert an outbox event in the same commit."
+              }
+            },
+            {
+              "assertion": "Includes correlation identifiers, structured failure logs, metrics, and trace propagation across the worker.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Emit structured logs containing update, callback, order, actor, attempt, state transition, duration, and outcome fields, while excluding secrets and payment data. Start a trace span at update receipt and propagate its context into database and outbox-worker spans; record retry and external-call events. Metrics should cover latency, outcomes, retries, conflicts, outbox lag, and dead letters."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects a best-effort sequence of database writes, bot sends, and prints with no recovery or diagnostics.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Apply a domain transition that only permits `pending -> confirmed`, write the confirmation and audit record, and insert an outbox event in the same commit. A unique idempotency key derived from the update/action ensures retries return the previously committed result. Call Telegram to refresh the message after commit; failures there must not roll back the order and can be retried from the outbox."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds production engineering and testing guidance for a unit-of-work boundary.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/architecture.md",
+                  "references/dialogs-and-ui.md",
+                  "references/mini-apps.md",
+                  "references/payments.md",
+                  "references/deployment.md",
+                  "references/testing.md",
+                  "references/production-engineering.md"
+                ],
+                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/production-engineering.md, and references/testing.md."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Makes the database mutation and outbox record atomic within a unit of work.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Give the order-confirmation handler an injected Unit of Work containing repositories, an outbox, and one explicit transaction. After defensively parsing the callback, load and lock the order, resolve current authorization server-side, and enforce the expected version and confirmable state. Insert an update/callback idempotency key under a unique constraint in the same transaction as the state transition and outbox event."
+              }
+            },
+            {
+              "assertion": "Includes correlation identifiers, structured failure logs, metrics, and trace propagation across the worker.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Emit structured logs with correlation ID, safe order/user identifiers, attempt, decision, duration, and error class while redacting callback contents and secrets. Create trace spans around update handling, authorization/query, transaction commit, outbox publication, and worker processing; persist trace context with the outbox record. Track latency, rollback/error classes, retry counts, idempotency conflicts, outbox age, and confirmation outcomes, with alerts tied to service objectives."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects a best-effort sequence of database writes, bot sends, and prints with no recovery or diagnostics.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Insert an update/callback idempotency key under a unique constraint in the same transaction as the state transition and outbox event. A duplicate should return the previously recorded outcome; expected denial should not mutate, and unexpected failure should roll back and reach centralized error handling. Acknowledge success only after commit."
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

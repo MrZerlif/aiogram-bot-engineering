@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,9 @@ CASES_PATH = EVALS_ROOT / "cases.yaml"
 BASELINE_PATH = EVALS_ROOT / "baseline-without-skill.md"
 RESULTS_PATH = EVALS_ROOT / "results-with-skill.md"
 ASSESSMENT_PATH = EVALS_ROOT / "evaluation-summary.md"
+ASSERTION_RESULTS_PATH = EVALS_ROOT / "assertion-results.json"
+RETRIEVAL_TRACE_PATH = EVALS_ROOT / "retrieval-trace.json"
+RUN_MANIFEST_PATH = EVALS_ROOT / "run-manifest.json"
 BUNDLE_ROOT = REPOSITORY_ROOT / "skill" / "aiogram-bot-engineering"
 
 REQUIRED_CASE_IDS = {
@@ -61,6 +65,34 @@ def load_cases(path: Path) -> list[dict[str, object]]:
     assert isinstance(data, list), "cases.yaml must contain a JSON list"
     assert all(isinstance(case, dict) for case in data), "each case must be an object"
     return data
+
+
+def load_json_object(path: Path) -> dict[str, object]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict), f"{path.name} must contain a JSON object"
+    return data
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def bundle_sha256() -> str:
+    digest = hashlib.sha256()
+    for path in sorted(
+        item
+        for item in BUNDLE_ROOT.rglob("*")
+        if item.is_file()
+        and "__pycache__" not in item.relative_to(BUNDLE_ROOT).parts
+        and item.suffix not in {".pyc", ".pyo"}
+    ):
+        relative = path.relative_to(BUNDLE_ROOT).as_posix().encode()
+        digest.update(relative + b"\0" + path.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
+def normalized_excerpt(text: str) -> str:
+    return " ".join(text.split())
 
 
 def parse_evidence_sections(path: Path) -> list[EvidenceSection]:
@@ -114,6 +146,140 @@ def test_independent_assessment_covers_every_case_with_numeric_scores() -> None:
             re.MULTILINE,
         )
         assert row is not None, f"missing numeric assessment row for {case_id}"
+
+
+def test_run_manifest_binds_inputs_outputs_and_runner_conditions() -> None:
+    manifest = load_json_object(RUN_MANIFEST_PATH)
+    assert manifest["schema_version"] == 1
+    assert re.fullmatch(r"[0-9a-f]{40}", manifest["skill_snapshot"]["commit"])
+    assert manifest["skill_snapshot"]["bundle_sha256"] == bundle_sha256()
+
+    artifact_paths = {
+        "cases": CASES_PATH,
+        "control_output": BASELINE_PATH,
+        "treatment_output": RESULTS_PATH,
+        "retrieval_trace": RETRIEVAL_TRACE_PATH,
+        "assertion_results": ASSERTION_RESULTS_PATH,
+    }
+    assert set(manifest["artifacts"]) == set(artifact_paths)
+    for name, path in artifact_paths.items():
+        artifact = manifest["artifacts"][name]
+        assert artifact["path"] == path.relative_to(REPOSITORY_ROOT).as_posix()
+        assert artifact["sha256"] == sha256_file(path)
+
+    runs = manifest["runs"]
+    assert isinstance(runs, list) and {run["condition"] for run in runs} == {
+        "control",
+        "treatment",
+        "evaluator",
+    }
+    assert len({run["run_id"] for run in runs}) == len(runs)
+    assert len({run["runner"]["canonical_task"] for run in runs}) == len(runs)
+    for run in runs:
+        assert run["runner"]["system"]
+        assert run["runner"]["model_family"]
+        assert run["runner"]["exact_model_revision"] is None
+        assert run["runner"]["revision_disclosure"]
+        assert run["allowed_context"]
+        assert run["prohibited_context"]
+        assert run["network_access"] is False
+
+    run_by_condition = {run["condition"]: run for run in runs}
+    trace = load_json_object(RETRIEVAL_TRACE_PATH)
+    assertion_results = load_json_object(ASSERTION_RESULTS_PATH)
+    assert run_by_condition["treatment"]["skill_commit"] == manifest["skill_snapshot"]["commit"]
+    assert run_by_condition["control"]["run_id"] == trace["control"]["run_id"]
+    assert run_by_condition["treatment"]["run_id"] == trace["treatment"]["run_id"]
+    assert run_by_condition["evaluator"]["run_id"] == assertion_results["run_id"]
+
+
+def test_retrieval_trace_is_path_based_and_covers_expected_routes() -> None:
+    trace = load_json_object(RETRIEVAL_TRACE_PATH)
+    cases = load_cases(CASES_PATH)
+    assert trace["schema_version"] == 1
+    assert trace["control"]["ordered_paths"] == []
+    assert trace["treatment"]["granularity"] == "shared_batch"
+    assert trace["treatment"]["attribution_limit"]
+
+    treatment_paths = trace["treatment"]["ordered_paths"]
+    assert len(treatment_paths) == len(set(treatment_paths))
+    for reference in treatment_paths:
+        assert resolve_bundle_reference(reference).is_file()
+    for case in cases:
+        assert trace["control"]["case_paths"][case["id"]] == []
+        assert trace["treatment"]["case_paths"][case["id"]] == treatment_paths
+        assert set(case["expected_references"]) <= set(treatment_paths), case["id"]
+
+
+def test_assertion_results_are_evidence_bound_and_scores_are_derived() -> None:
+    cases = {case["id"]: case for case in load_cases(CASES_PATH)}
+    outputs = {
+        "control": {
+            section.case_id: section.body for section in parse_evidence_sections(BASELINE_PATH)
+        },
+        "treatment": {
+            section.case_id: section.body for section in parse_evidence_sections(RESULTS_PATH)
+        },
+    }
+    trace = load_json_object(RETRIEVAL_TRACE_PATH)
+    results = load_json_object(ASSERTION_RESULTS_PATH)
+    records = results["cases"]
+    assert {record["id"] for record in records} == REQUIRED_CASE_IDS
+    summary = ASSESSMENT_PATH.read_text(encoding="utf-8")
+
+    aggregate = {"control": [0, 0], "treatment": [0, 0]}
+    field_by_category = {
+        "retrieval": "retrieval_assertions",
+        "application": "application_assertions",
+        "gap": "gap_assertions",
+    }
+    for record in records:
+        case_id = record["id"]
+        case = cases[case_id]
+        per_case_scores: dict[str, tuple[int, int]] = {}
+        for condition in ("control", "treatment"):
+            condition_result = record["conditions"][condition]
+            passed = 0
+            total = 0
+            for category, case_field in field_by_category.items():
+                assertions = condition_result[category]
+                assert [item["assertion"] for item in assertions] == case[case_field]
+                for item in assertions:
+                    total += 1
+                    evidence = item["evidence"]
+                    if category == "retrieval":
+                        assert evidence["kind"] == "retrieval_trace"
+                        paths = trace[condition]["ordered_paths"]
+                        expected_pass = set(case["expected_references"]) <= set(paths)
+                        assert item["passed"] is expected_pass
+                        assert evidence["paths"] == paths
+                    elif item["passed"]:
+                        assert evidence["kind"] == "output_excerpt"
+                        excerpt = normalized_excerpt(evidence["excerpt"])
+                        assert excerpt
+                        assert excerpt in normalized_excerpt(outputs[condition][case_id])
+                    else:
+                        assert evidence["kind"] == "missing_output_evidence"
+                        assert evidence["reason"]
+                    passed += int(item["passed"])
+            per_case_scores[condition] = (passed, total)
+            aggregate[condition][0] += passed
+            aggregate[condition][1] += total
+
+        row = re.search(
+            rf"^\|\s*{re.escape(case_id)}\s*\|\s*(\d+)/(\d+)\s*\|\s*(\d+)/(\d+)\s*\|",
+            summary,
+            re.MULTILINE,
+        )
+        assert row is not None
+        assert tuple(map(int, row.groups())) == (
+            *per_case_scores["control"],
+            *per_case_scores["treatment"],
+        )
+
+    for condition, (passed, total) in aggregate.items():
+        assert 0 <= passed <= total
+        assert re.search(rf"{condition}[^\n]*{passed}/{total}", summary, re.IGNORECASE)
 
 
 def test_skill_eval_artifacts_are_complete_and_reachable() -> None:

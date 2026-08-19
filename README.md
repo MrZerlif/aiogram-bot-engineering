@@ -79,11 +79,19 @@ a bot token, creating a `Bot`, polling, or making a network request.
 ## Behavioral evaluation evidence
 
 [`tests/skill-evals/cases.yaml`](tests/skill-evals/cases.yaml) defines the
-deterministic evaluation cases. The paired recorded independent runs are the
-[`baseline-without-skill.md`](tests/skill-evals/baseline-without-skill.md)
+deterministic evaluation cases. Separate Codex subagent conditions produced the
+recorded [`baseline-without-skill.md`](tests/skill-evals/baseline-without-skill.md)
 control and [`results-with-skill.md`](tests/skill-evals/results-with-skill.md)
-treatment. [`evaluation-summary.md`](tests/skill-evals/evaluation-summary.md)
-contains the independent rubric-based comparison.
+treatment. The exact deployed model revision was not exposed, so the repository
+does not claim byte-for-byte reproducibility or platform-signed independence.
+[`run-manifest.json`](tests/skill-evals/run-manifest.json) records runner task
+identities, allowed context, the skill commit, and artifact hashes;
+[`retrieval-trace.json`](tests/skill-evals/retrieval-trace.json) discloses the
+self-reported shared-batch read set. Assertion-level scores and literal output
+evidence live in
+[`assertion-results.json`](tests/skill-evals/assertion-results.json), with the
+derived human-readable comparison in
+[`evaluation-summary.md`](tests/skill-evals/evaluation-summary.md).
 
 Pytest validates the artifacts' structure and bundle-reference reachability.
 CI does not invoke a model or regenerate the recorded runs.
