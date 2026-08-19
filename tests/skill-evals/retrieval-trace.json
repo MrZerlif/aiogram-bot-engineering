@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-08-19T20:50:02+03:00",
+  "recorded_at": "2026-08-20T00:25:10.6648376+03:00",
   "source": {
     "kind": "originating_runner_self_report_from_tool_history",
     "platform_signed": false,
-    "note": "Captured after the recorded runs. The control runner confirmed it read no repository context. The treatment runner reported one shared ordered context opened in two batches; exact per-case read attribution was not distinguishable."
+    "note": "The original ten treatment cases used one shared batch. The final presentation/custom-emoji cases used fresh isolated runners against frozen bundle SHA-256 cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150 and reported their own path order. Control runners confirmed they read no repository context."
   },
   "control": {
-    "run_id": "control-20260819-r1",
-    "canonical_task": "/root/eval_baseline_run",
+    "run_id": "control-20260819-composite-r2",
+    "canonical_task": "composite: /root/eval_baseline_run + /root/baseline_native_ui + /root/baseline_emoji_system",
     "granularity": "none",
     "ordered_paths": [],
     "attribution_limit": "The control condition was prohibited from reading the repository skill, eval rubrics, and repository documentation.",
@@ -22,13 +22,16 @@
       "webhook-secret": [],
       "background-jobs": [],
       "testing-strategy": [],
-      "production-uow-observability": []
+      "production-uow-observability": [],
+      "native-presentation-anti-slop": [],
+      "custom-emoji-capability-selection": []
     }
   },
   "treatment": {
-    "run_id": "treatment-20260819-r3",
-    "canonical_task": "/root/eval_treatment_round3",
-    "granularity": "shared_batch",
+    "run_id": "treatment-20260820-composite-r7",
+    "canonical_task": "composite: /root/eval_treatment_round3 + /root/final_treatment_native_r2 + /root/final_treatment_emoji_r2",
+    "granularity": "mixed_runs",
+    "final_isolated_bundle_sha256": "cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150",
     "ordered_paths": [
       "SKILL.md",
       "references/architecture.md",
@@ -37,9 +40,11 @@
       "references/payments.md",
       "references/deployment.md",
       "references/testing.md",
-      "references/production-engineering.md"
+      "references/production-engineering.md",
+      "references/presentation-and-ux.md",
+      "references/custom-emoji-system.md"
     ],
-    "attribution_limit": "Resources were opened in two batches before drafting. Each case had this shared context available; these repeated case_paths do not prove a separate per-case read event.",
+    "attribution_limit": "The original ten cases share the same batch paths and do not prove separate per-case reads. The final two paths are isolated-runner self-reports; none of the path reports are platform-signed.",
     "case_paths": {
       "fsm-linear-flow": [
         "SKILL.md",
@@ -140,6 +145,18 @@
         "references/deployment.md",
         "references/testing.md",
         "references/production-engineering.md"
+      ],
+      "native-presentation-anti-slop": [
+        "SKILL.md",
+        "references/presentation-and-ux.md",
+        "references/dialogs-and-ui.md",
+        "references/custom-emoji-system.md"
+      ],
+      "custom-emoji-capability-selection": [
+        "SKILL.md",
+        "references/presentation-and-ux.md",
+        "references/dialogs-and-ui.md",
+        "references/custom-emoji-system.md"
       ]
     }
   }

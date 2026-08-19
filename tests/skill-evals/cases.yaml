@@ -27,6 +27,24 @@
     "gap_assertions": ["Avoids manually editing one message with ad-hoc callback-data parsing for every widget."]
   },
   {
+    "id": "native-presentation-anti-slop",
+    "prompt": "Сделай нативное главное меню Telegram-бота для VPN визуально дорогим, как у аккуратных коммерческих ботов. Mini App не нужен. Нужны текст сообщения, баннер и inline-клавиатура. Добавь красивые эмодзи, чтобы не выглядело скучно, но экран должен оставаться понятным. Покажи конкретную структуру экрана и подписи кнопок.",
+    "topics": ["presentation", "custom-emoji", "dialogs", "ui", "anti-slop"],
+    "expected_references": ["SKILL.md", "references/presentation-and-ux.md", "references/custom-emoji-system.md", "references/dialogs-and-ui.md"],
+    "retrieval_assertions": ["Routes composition to the presentation reference, icons to the custom-emoji reference, and native mechanics to dialogs-and-ui without loading unrelated implementation references."],
+    "application_assertions": ["Provides a concrete PresentationBrief covering product and audience, top task, tone, native surface, cover role, action hierarchy, icon capability and fallback, message lifecycle, and state decisions.", "Provides at least one ScreenSpec with purpose, content, primary and secondary actions, navigation, semantic icon tokens, and state variants.", "Defines a native screen with one clear primary action, grouped secondary actions, and labels that remain understandable without icons.", "Uses the cover for brand or context while keeping critical status and actions in Telegram text, and defines stable edit-in-place navigation.", "Makes explicit design decisions for loading, empty, error, confirmation, success, and destructive states, marking genuinely inapplicable states rather than silently omitting them.", "Uses restrained semantic icon tokens under one exact pack or coherence lock rather than assigning decorative emoji by quota."],
+    "gap_assertions": ["Rejects filler emoji, mixed visual families, decorative emphasis on every button, and critical information available only in the banner."]
+  },
+  {
+    "id": "custom-emoji-capability-selection",
+    "prompt": "Собери для aiogram-бота лучший набор Telegram custom emoji для кнопок: оплата, профиль, серверы, поддержка, назад, предупреждение и удаление. Бери популярные публичные наборы, сам выбери ID и объясни, как ИИ будет автоматически выбирать между эмодзи. У владельца бота есть Telegram Premium — значит всё должно работать везде, включая канал.",
+    "topics": ["custom-emoji", "presentation", "ui"],
+    "expected_references": ["SKILL.md", "references/custom-emoji-system.md"],
+    "retrieval_assertions": ["Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance."],
+    "application_assertions": ["Corrects the premise that a bot has Premium and does not treat owner Premium as universal or channel capability.", "Makes the model emit semantic tokens and resolves them pack-first under a coherence lock with deterministic fallbacks ending in no icon.", "Uses only verified registry IDs and requires explicit license and provenance instead of treating a public pack link as permission to redistribute."],
+    "gap_assertions": ["Rejects invented custom emoji IDs, arbitrary cross-pack mixing, unlicensed repacking, and the claim that owner Premium makes button icons work everywhere."]
+  },
+  {
     "id": "mini-app-launch-security",
     "prompt": "Launch a Mini App for an account dashboard and authenticate its backend requests safely.",
     "topics": ["mini-apps", "security"],

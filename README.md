@@ -85,10 +85,11 @@ control and [`results-with-skill.md`](tests/skill-evals/results-with-skill.md)
 treatment. The exact deployed model revision was not exposed, so the repository
 does not claim byte-for-byte reproducibility or platform-signed independence.
 [`run-manifest.json`](tests/skill-evals/run-manifest.json) records runner task
-identities, allowed context, the skill commit, and artifact hashes;
+identities, allowed context, the base commit, the exact evaluated working-bundle
+hash, and artifact hashes;
 [`retrieval-trace.json`](tests/skill-evals/retrieval-trace.json) discloses the
-self-reported shared-batch read set. Assertion-level scores and literal output
-evidence live in
+self-reported shared-batch and isolated-runner read sets. Assertion-level scores
+and literal output evidence live in
 [`assertion-results.json`](tests/skill-evals/assertion-results.json), with the
 derived human-readable comparison in
 [`evaluation-summary.md`](tests/skill-evals/evaluation-summary.md).

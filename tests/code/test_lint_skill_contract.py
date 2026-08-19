@@ -20,10 +20,12 @@ from lint_skill_contract import (  # noqa: E402
 
 REQUIRED_REFERENCE_NAMES = (
     "architecture.md",
+    "custom-emoji-system.md",
     "deployment.md",
     "dialogs-and-ui.md",
     "mini-apps.md",
     "payments.md",
+    "presentation-and-ux.md",
     "production-engineering.md",
     "rich-messages.md",
     "testing.md",
@@ -233,10 +235,12 @@ def test_real_repository_has_no_orphan_resources() -> None:
     assert lint_skill_bundle(REPOSITORY_ROOT / BUNDLE_RELATIVE) == []
 
 
-def test_real_bundle_directly_routes_testing_and_production_references() -> None:
+def test_real_bundle_directly_routes_specialized_references() -> None:
     routes = inspect_skill_routes(REPOSITORY_ROOT / BUNDLE_RELATIVE)
 
     assert {
+        Path("references/custom-emoji-system.md"),
+        Path("references/presentation-and-ux.md"),
         Path("references/testing.md"),
         Path("references/production-engineering.md"),
     } <= routes.references

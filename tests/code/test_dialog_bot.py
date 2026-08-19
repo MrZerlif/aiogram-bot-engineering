@@ -69,3 +69,15 @@ def test_example_imports_and_builds_components_without_runtime_access(
     assert isinstance(dialog, Dialog)
     assert isinstance(router, Router)
     assert isinstance(dispatcher, Dispatcher)
+
+
+def test_primary_action_style_is_semantic_not_decorative() -> None:
+    """Catch using a completion color for an ordinary primary action."""
+
+    from aiogram.enums import ButtonStyle
+
+    example = import_dialog_example()
+
+    style = example.build_primary_style(custom_emoji_id=None)
+
+    assert style.style is ButtonStyle.PRIMARY

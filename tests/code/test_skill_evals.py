@@ -26,6 +26,8 @@ REQUIRED_CASE_IDS = {
     "fsm-linear-flow",
     "scenes-isolated-flow",
     "dialog-widget-ui",
+    "native-presentation-anti-slop",
+    "custom-emoji-capability-selection",
     "mini-app-launch-security",
     "callback-authorization",
     "payment-lifecycle",
@@ -38,6 +40,9 @@ REQUIRED_TOPICS = {
     "fsm",
     "scenes",
     "dialogs",
+    "presentation",
+    "custom-emoji",
+    "anti-slop",
     "mini-apps",
     "callback-authorization",
     "payments",
@@ -211,6 +216,11 @@ def test_run_manifest_binds_inputs_outputs_and_runner_conditions() -> None:
     trace = load_json_object(RETRIEVAL_TRACE_PATH)
     assertion_results = load_json_object(ASSERTION_RESULTS_PATH)
     assert run_by_condition["treatment"]["skill_commit"] == manifest["skill_snapshot"]["commit"]
+    assert (
+        run_by_condition["treatment"]["final_isolated_bundle_sha256"]
+        == manifest["skill_snapshot"]["bundle_sha256"]
+        == trace["treatment"]["final_isolated_bundle_sha256"]
+    )
     assert run_by_condition["control"]["run_id"] == trace["control"]["run_id"]
     assert run_by_condition["treatment"]["run_id"] == trace["treatment"]["run_id"]
     assert run_by_condition["evaluator"]["run_id"] == assertion_results["run_id"]
@@ -221,7 +231,7 @@ def test_retrieval_trace_is_path_based_and_covers_expected_routes() -> None:
     cases = load_cases(CASES_PATH)
     assert trace["schema_version"] == 1
     assert trace["control"]["ordered_paths"] == []
-    assert trace["treatment"]["granularity"] == "shared_batch"
+    assert trace["treatment"]["granularity"] in {"shared_batch", "mixed_runs"}
     assert trace["treatment"]["attribution_limit"]
 
     treatment_paths = trace["treatment"]["ordered_paths"]
@@ -230,8 +240,12 @@ def test_retrieval_trace_is_path_based_and_covers_expected_routes() -> None:
         assert resolve_bundle_reference(reference).is_file()
     for case in cases:
         assert trace["control"]["case_paths"][case["id"]] == []
-        assert trace["treatment"]["case_paths"][case["id"]] == treatment_paths
-        assert set(case["expected_references"]) <= set(treatment_paths), case["id"]
+        case_paths = trace["treatment"]["case_paths"][case["id"]]
+        assert len(case_paths) == len(set(case_paths)), case["id"]
+        assert set(case_paths) <= set(treatment_paths), case["id"]
+        for reference in case_paths:
+            assert resolve_bundle_reference(reference).is_file()
+        assert set(case["expected_references"]) <= set(case_paths), case["id"]
 
 
 def test_assertion_results_are_evidence_bound_and_scores_are_derived() -> None:
@@ -272,7 +286,7 @@ def test_assertion_results_are_evidence_bound_and_scores_are_derived() -> None:
                     evidence = item["evidence"]
                     if category == "retrieval":
                         assert evidence["kind"] == "retrieval_trace"
-                        paths = trace[condition]["ordered_paths"]
+                        paths = trace[condition]["case_paths"][case_id]
                         expected_pass = set(case["expected_references"]) <= set(paths)
                         assert item["passed"] is expected_pass
                         assert evidence["paths"] == paths

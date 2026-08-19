@@ -1,7 +1,10 @@
 # Baseline without skill — recorded control run
 
-Run `control-20260819-r1`, produced by `/root/eval_baseline_run` on
-2026-08-19. The runner received the ten prompt texts directly and confirmed it
+Run `control-20260819-composite-r2` combines `/root/eval_baseline_run`,
+`/root/baseline_native_ui`, and `/root/baseline_emoji_system` on 2026-08-19.
+The original runner received ten prompt texts directly; two later independent
+control runners received the presentation and custom-emoji prompts without
+repository context. All control runners confirmed they
 did not read the repository skill, rubrics, tests, README, result artifacts, or
 web content. The exact deployed model revision was not exposed. See
 [`run-manifest.json`](run-manifest.json) for the recorded protocol and hashes.
@@ -65,3 +68,223 @@ Run integration tests against the real database engine used in production so tra
 Make the handler an orchestration layer around a unit of work. Parse and validate the callback, authenticate the actor, then begin a transaction and load the order with a row lock or optimistic version. Apply a domain transition that only permits `pending -> confirmed`, write the confirmation and audit record, and insert an outbox event in the same commit. A unique idempotency key derived from the update/action ensures retries return the previously committed result. Call Telegram to refresh the message after commit; failures there must not roll back the order and can be retried from the outbox.
 
 Retry only classified transient failures such as serialization conflicts, deadlocks, timeouts, and rate limits, using bounded exponential backoff with jitter. Do not retry validation, authorization, or invariant failures. Emit structured logs containing update, callback, order, actor, attempt, state transition, duration, and outcome fields, while excluding secrets and payment data. Start a trace span at update receipt and propagate its context into database and outbox-worker spans; record retry and external-call events. Metrics should cover latency, outcomes, retries, conflicts, outbox lag, and dead letters. Test commit ambiguity, concurrent confirmations, duplicate updates, post-commit API failure, log redaction, and trace-context propagation.
+
+## native-presentation-anti-slop
+
+Ниже — готовый вариант с условным брендом **VELA VPN**.
+
+### Структура экрана
+
+```text
+┌──────────────────────────────────┐
+│                                  │
+│           VELA VPN               │
+│     БЫСТРО • ЧАСТНО • ВЕЗДЕ      │
+│                                  │
+│       абстрактная световая       │
+│          сфера / орбита          │
+└──────────────────────────────────┘
+
+Добрый вечер, Алексей 👋
+
+🟢 Доступ активен
+💎 Premium · до 24 сентября 2026
+📱 Подключено устройств: 2 из 5
+
+Управляйте подключением и подпиской прямо здесь 👇
+
+[        ⚡ Подключить VPN        ]
+[  💎 Продлить  ] [ 📊 Подписка  ]
+[ 📱 Устройства ] [  🎁 Бонусы   ]
+[ 📖 Инструкция ] [ 💬 Поддержка ]
+```
+
+### Текст сообщения
+
+Для аккуратного оформления можно использовать HTML-разметку Telegram:
+
+```html
+<b>Добрый вечер, {first_name} 👋</b>
+
+<blockquote>🟢 <b>Доступ активен</b>
+💎 Premium · до 24 сентября 2026
+📱 Подключено устройств: 2 из 5</blockquote>
+
+Управляйте подключением и подпиской прямо здесь 👇
+```
+
+Важно писать именно «доступ активен», а не «VPN подключён»: бот знает состояние подписки, но не всегда может определить реальное VPN-соединение на устройстве.
+
+### Inline-клавиатура
+
+```text
+⚡ Подключить VPN                   → vpn:connect
+
+💎 Продлить                        → subscription:renew
+📊 Подписка                        → subscription:details
+
+📱 Устройства                      → devices:list
+🎁 Бонусы                          → referral:open
+
+📖 Инструкция                      → help:setup
+💬 Поддержка                       → support:open
+```
+
+Главная кнопка занимает всю строку. Остальные действия собраны попарно — так меню выглядит спокойнее и визуально дороже.
+
+### Баннер
+
+Формат: **1280 × 720 px**, PNG или качественный JPEG.
+
+Визуальное направление:
+
+- глубокий тёмно-синий фон: `#07111F → #0B2447`;
+- мягкое голубое свечение: `#45B7FF`;
+- абстрактная стеклянная сфера или тонкие световые орбиты;
+- небольшой фирменный знак и надпись `VELA VPN`;
+- подзаголовок: `БЫСТРО • ЧАСТНО • ВЕЗДЕ`;
+- много свободного пространства, без замков, флагов, серверов и нарисованных кнопок;
+- весь важный контент — в центральных 80% изображения, чтобы превью Telegram ничего не обрезало.
+
+Промпт для генерации:
+
+```text
+Premium minimalist banner for a commercial VPN Telegram bot,
+deep navy gradient background, elegant translucent glass sphere
+with thin cyan light rings, subtle depth and soft reflections,
+small refined VELA VPN logo in the center, Russian subtitle
+“БЫСТРО • ЧАСТНО • ВЕЗДЕ”, high-end fintech aesthetic,
+clean composition, generous negative space, no devices,
+no padlock icons, no buttons, no people, 16:9
+```
+
+Для пользователя без подписки статус и главная кнопка меняются на:
+
+```text
+🟠 Доступ не активирован
+
+[         💎 Выбрать тариф         ]
+```
+
+Остальная структура меню остаётся неизменной — экран не прыгает между состояниями и воспринимается как цельный продукт.
+
+## custom-emoji-capability-selection
+
+Сразу важное ограничение: я не стану придумывать 19-значные `custom_emoji_id`. ID принадлежит конкретному эмодзи, а не набору целиком, и его необходимо получить из Telegram и проверить через Bot API. Неверный ID даст пустую иконку или ошибку.
+
+Я бы зафиксировал такой единообразный набор:
+
+| Ключ | Образ | Текст кнопки | Unicode-fallback |
+|---|---|---|---|
+| `payment` | банковская карта | Оплатить | 💳 |
+| `profile` | силуэт пользователя | Профиль | 👤 |
+| `servers` | стойка серверов | Серверы | 🖥️ |
+| `support` | гарнитура | Поддержка | 🎧 |
+| `back` | стрелка влево | Назад | ◀️ |
+| `warning` | жёлтый треугольник | Внимание | ⚠️ |
+| `delete` | красная корзина | Удалить | 🗑️ |
+
+Лучше брать все семь эмодзи из одного публичного набора с простыми пиктограммами, а не смешивать 3D, неон и рисованные персонажи.
+
+### Как получить настоящие ID
+
+Владелец отправляет боту выбранные семь custom emoji одним сообщением строго в указанном порядке. Временный обработчик извлекает их ID:
+
+```python
+from aiogram import F, Router
+from aiogram.enums import MessageEntityType
+from aiogram.types import Message
+
+router = Router()
+
+ORDER = (
+    "payment",
+    "profile",
+    "servers",
+    "support",
+    "back",
+    "warning",
+    "delete",
+)
+
+
+@router.message(F.entities)
+async def register_button_emojis(message: Message) -> None:
+    entities = sorted(message.entities or [], key=lambda entity: entity.offset)
+
+    ids = [
+        entity.custom_emoji_id
+        for entity in entities
+        if entity.type == MessageEntityType.CUSTOM_EMOJI
+        and entity.custom_emoji_id
+    ]
+
+    if len(ids) != len(ORDER):
+        await message.answer(
+            "Нужно отправить ровно 7 custom emoji: "
+            "оплата, профиль, серверы, поддержка, назад, "
+            "предупреждение, удаление."
+        )
+        return
+
+    manifest = dict(zip(ORDER, ids, strict=True))
+
+    # Дополнительная проверка: Telegram должен вернуть все семь стикеров.
+    stickers = await message.bot.get_custom_emoji_stickers(
+        custom_emoji_ids=ids,
+    )
+    if len(stickers) != len(ids):
+        await message.answer("Не все custom emoji ID прошли проверку.")
+        return
+
+    await message.answer(
+        "ID проверены:\n"
+        + "\n".join(f"{key}: {value}" for key, value in manifest.items())
+    )
+```
+
+Полученный словарь нужно сохранить в конфигурации проекта. ID не являются секретами.
+
+Использование в кнопке:
+
+```python
+from aiogram.types import InlineKeyboardButton
+
+button = InlineKeyboardButton(
+    text="Оплатить",
+    callback_data="payment:start",
+    icon_custom_emoji_id=BUTTON_EMOJI["payment"],
+)
+```
+
+Потребуется актуальная версия aiogram, в которой поле `icon_custom_emoji_id` уже описано.
+
+### Как ИИ выбирает эмодзи
+
+Модели нельзя разрешать генерировать Telegram ID напрямую. Она должна возвращать только один ключ из закрытого списка:
+
+```python
+ButtonKind = Literal[
+    "payment",
+    "profile",
+    "servers",
+    "support",
+    "back",
+    "warning",
+    "delete",
+]
+```
+
+Правила выбора:
+
+- покупка, тариф, счёт, продление → `payment`;
+- аккаунт, настройки пользователя → `profile`;
+- хосты, регионы, подключения → `servers`;
+- помощь, оператор, обращение → `support`;
+- переход на предыдущий экран → `back`;
+- риск или важное уведомление → `warning`;
+- необратимое удаление → `delete`.
+
+После ответа модели приложение само подставляет ID из `BUTTON_EMOJI`. Для удаления полезно показывать сначала `delete`, а на экране подтверждения — `warning`. При неизвестном ответе модели используется безопасный вариант без custom emoji.
+
+Premium должен быть активен именно у владельца бота. В канале бот также должен иметь право публиковать сообщения; там следует использовать inline-клавиатуру. Пользователям Premium не требуется, чтобы видеть иконки. Однако буквально «везде» гарантировать custom emoji нельзя: старые клиенты Telegram могут показать только обычный текст кнопки. Поэтому текст `Оплатить`, `Назад`, `Удалить` и т. п. всегда должен оставаться понятным без иконки.

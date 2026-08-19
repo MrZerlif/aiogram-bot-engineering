@@ -1,6 +1,6 @@
 ---
 name: aiogram-bot-engineering
-description: Use when designing, implementing, reviewing, or deploying Python aiogram Telegram bots with dialogs, Rich Messages, Mini Apps, payments, or webhooks.
+description: Use when designing, implementing, reviewing, or deploying Python aiogram Telegram bots with native UI presentation, dialogs, custom emoji, Rich Messages, Mini Apps, payments, or webhooks.
 ---
 
 # Aiogram Bot Engineering
@@ -12,7 +12,9 @@ Compatibility baseline: Python 3.10+, aiogram 3.30.0, aiogram-dialog 2.6.0, and 
 | Request | Read |
 | --- | --- |
 | Routers, Dispatcher, configuration, middleware, FSM, storage, or polling decisions | [architecture](references/architecture.md) |
-| Native FSM or Scenes, multi-window menus, wizards, dynamic lists, pagination, styled buttons, or custom emoji | [dialogs and UI](references/dialogs-and-ui.md) |
+| Native FSM or Scenes, multi-window menus, wizards, dynamic lists, pagination, or styled-button mechanics | [dialogs and UI](references/dialogs-and-ui.md) |
+| Native screen composition, cover art, action hierarchy, concise copy, screen states, accessibility, or emoji-slop review | [presentation and UX](references/presentation-and-ux.md) |
+| Custom emoji capability, sourcing and licenses, semantic registry, deterministic selection, owned sets, or fallbacks | [custom emoji system](references/custom-emoji-system.md) |
 | Structured native Rich Messages, media bindings, custom emoji, or streaming drafts | [rich messages](references/rich-messages.md) |
 | Server-side Mini App `initData` validation or launch boundary | [Mini Apps](references/mini-apps.md) |
 | Telegram Stars, physical/offline payments, external checkout, or fulfillment | [payments](references/payments.md) |
@@ -20,6 +22,13 @@ Compatibility baseline: Python 3.10+, aiogram 3.30.0, aiogram-dialog 2.6.0, and 
 | Handler, router, FSM, webhook, Mini App, or payment tests | [testing](references/testing.md) |
 | PostgreSQL, idempotency, queues, rate limits, observability, or production reliability | [production engineering](references/production-engineering.md) |
 | A complete aiogram-dialog example | [full dialog example](examples/dialog-bot.py) |
+
+For a styled native interface, read presentation guidance first. If the output
+includes an inline or reply keyboard, also read dialogs and UI for the native
+mechanics even when the request is primarily visual. If the request mentions
+emoji or icons, or the proposed design uses them, also read the custom emoji
+system and output semantic tokens before rendered assets. An attractive screen
+is a coherent hierarchy, not an emoji quota.
 
 Prefer native aiogram APIs. Use a handler/native keyboard for one action or
 screen, native FSM for short linear input, experimental Scenes for an isolated

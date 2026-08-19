@@ -40,7 +40,7 @@ def build_welcome_rich_message() -> InputRichMessage:
 
 def build_primary_style(custom_emoji_id: str | None) -> Style:
     """Create the fixed style used by the dialog's primary action."""
-    return Style(style=ButtonStyle.SUCCESS, emoji_id=custom_emoji_id)
+    return Style(style=ButtonStyle.PRIMARY, emoji_id=custom_emoji_id)
 
 
 async def acknowledge_primary(

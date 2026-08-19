@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "run_id": "evaluator-20260819-r4",
+  "run_id": "evaluator-20260820-composite-r7",
   "runner": {
-    "canonical_task": "/root/eval_assertion_judge",
+    "canonical_task": "composite: /root/eval_assertion_judge + /root/final_eval_visual_r2",
     "system": "Codex collaboration subagent",
     "model_family": "GPT-5/Codex",
     "exact_model_revision": null,
     "revision_disclosure": "Exact deployed model revision is not exposed to the runner."
   },
-  "method": "Each condition is scored at assertion level. Retrieval passes only when every expected reference appears in that condition's retrieval-trace ordered_paths; output prose is not used to infer retrieval. Application and gap assertions pass only when the corresponding case output contains explicit support, recorded as one exact contiguous excerpt. Treatment retrieval uses the shared-batch self-reported trace and is not interpreted as a per-case platform-signed read event.",
+  "method": "Each condition is scored at assertion level. Retrieval passes only when every expected reference appears in that condition's case-specific retrieval-trace case_paths; output prose is not used to infer retrieval. Application and gap assertions pass only when the corresponding case output contains explicit support, recorded as one exact contiguous excerpt. The original ten treatment cases use one shared-batch runner self-report. The final presentation and custom-emoji cases use isolated-runner self-reports against frozen bundle SHA-256 cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150; no read claim is platform-signed.",
   "cases": [
     {
       "id": "fsm-linear-flow",
@@ -964,6 +964,270 @@
               "evidence": {
                 "kind": "output_excerpt",
                 "excerpt": "Insert an update/callback idempotency key under a unique constraint in the same transaction as the state transition and outbox event. A duplicate should return the previously recorded outcome; expected denial should not mutate, and unexpected failure should roll back and reach centralized error handling. Acknowledge success only after commit."
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "native-presentation-anti-slop",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Routes composition to the presentation reference, icons to the custom-emoji reference, and native mechanics to dialogs-and-ui without loading unrelated implementation references.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control case_paths list is empty, so none of the four expected references are present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Provides a concrete PresentationBrief covering product and audience, top task, tone, native surface, cover role, action hierarchy, icon capability and fallback, message lifecycle, and state decisions.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control body has no PresentationBrief and does not cover icon capability and fallback, an edit-versus-send message lifecycle, or decisions for all six named states."
+              }
+            },
+            {
+              "assertion": "Provides at least one ScreenSpec with purpose, content, primary and secondary actions, navigation, semantic icon tokens, and state variants.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control body provides a visual mockup, not a ScreenSpec covering purpose, content, actions, navigation, semantic tokens, and state variants."
+              }
+            },
+            {
+              "assertion": "Defines a native screen with one clear primary action, grouped secondary actions, and labels that remain understandable without icons.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "### Inline-клавиатура\n\n```text\n⚡ Подключить VPN                   → vpn:connect\n\n💎 Продлить                        → subscription:renew\n📊 Подписка                        → subscription:details\n\n📱 Устройства                      → devices:list\n🎁 Бонусы                          → referral:open\n\n📖 Инструкция                      → help:setup\n💬 Поддержка                       → support:open\n```\n\nГлавная кнопка занимает всю строку. Остальные действия собраны попарно — так меню выглядит спокойнее и визуально дороже."
+              }
+            },
+            {
+              "assertion": "Uses the cover for brand or context while keeping critical status and actions in Telegram text, and defines stable edit-in-place navigation.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control body gives brand-banner guidance and places status and actions in Telegram content, but it never defines stable edit-in-place navigation."
+              }
+            },
+            {
+              "assertion": "Makes explicit design decisions for loading, empty, error, confirmation, success, and destructive states, marking genuinely inapplicable states rather than silently omitting them.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "Only active and not-activated subscription variants are shown; loading, empty, error, confirmation, success, and destructive decisions are not all specified."
+              }
+            },
+            {
+              "assertion": "Uses restrained semantic icon tokens under one exact pack or coherence lock rather than assigning decorative emoji by quota.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control body assigns literal Unicode emoji to individual buttons and names neither semantic icon tokens nor an exact pack or coherence lock."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects filler emoji, mixed visual families, decorative emphasis on every button, and critical information available only in the banner.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control decorates every shown button with emoji and does not reject filler emoji or mixed visual families, so the full four-part rejection is absent."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Routes composition to the presentation reference, icons to the custom-emoji reference, and native mechanics to dialogs-and-ui without loading unrelated implementation references.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/presentation-and-ux.md",
+                  "references/dialogs-and-ui.md",
+                  "references/custom-emoji-system.md"
+                ],
+                "reason": "All four expected references are present in this case's treatment case_paths, and the list contains no unrelated implementation paths."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Provides a concrete PresentationBrief covering product and audience, top task, tone, native surface, cover role, action hierarchy, icon capability and fallback, message lifecycle, and state decisions.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "## PresentationBrief\n\n| Параметр | Решение |\n|---|---|\n| Аудитория | Пользователи VPN без необходимости разбираться в технических деталях |\n| Главная задача | Быстро подключить новое устройство |\n| Тон | Спокойный, уверенный, технологичный |\n| Поверхность | Нативное сообщение: фото-баннер, HTML-caption и inline-клавиатура |\n| Роль баннера | Бренд и атмосфера; никаких тарифов, дат или кнопок внутри изображения |\n| Иерархия | `Подключить VPN` — primary; остальные действия — обычные |\n| Навигация | Внутренние экраны редактируют текущее сообщение; возврат ведёт в главное меню |\n| Иконки | Один набор монохромных custom emoji; при недоступности весь экран показывается без иконок |\n\n## Система иконок\n\nСтиль-лок: `vpn_ui_adaptive_v1` — тонкие монохромные контурные пиктограммы, одинаковая толщина линий, без анимации, с адаптивной перекраской Telegram.\n\n| Токен | Образ | Назначение |\n|---|---|---|\n| `status_secure` | щит с галочкой | Состояние аккаунта |\n| `connect` | штекер или защищённое соединение | Подключение VPN |\n| `payment` | банковская карта | Подписка |\n| `devices` | телефон и ноутбук | Устройства |\n| `servers` | метка локации | Серверы |\n| `support` | гарнитура | Поддержка |\n\nВ реализации токены разрешаются только в проверенные `custom_emoji_id`. Числовые ID нельзя придумывать. Если бот не имеет подходящей capability через дополнительный Fragment username либо Premium владельца в поддерживаемом типе чата, `icon_custom_emoji_id` убирается сразу у всех кнопок. Текстовые подписи остаются полными.\n\n## Карта экрана\n\n```text\n/start\n  └─ Обновление статуса\n       ├─ Главное меню: подписка активна\n       │    ├─ Подключить VPN → выбор устройства / инструкция\n       │    ├─ Подписка → сведения и продление\n       │    ├─ Устройства → список устройств\n       │    ├─ Локации → список серверов\n       │    └─ Поддержка → обращение\n       ├─ Главное меню: подписка закончилась\n       │    └─ Выбрать тариф → тарифы\n       └─ Ошибка загрузки\n            ├─ Повторить\n            └─ Поддержка\n```\n\nВсе переходы внутри меню редактируют исходное сообщение. Новый отдельный message нужен только для долговечных событий, например чека об оплате или ответа оператора.\n\n## Состояния\n\n| Состояние | Текст и поведение |\n|---|---|\n| Loading | `Обновляем статус VPN…` Повторные действия временно не показываются; доступна только поддержка |\n| Empty | `Устройств пока нет` и основная кнопка `Подключить VPN` |\n| Error | `Не удалось обновить статус. Подписка и настройки не изменены.` Кнопки `Повторить` и `Поддержка` |\n| Confirmation | N/A — главное меню только открывает другие экраны и ничего необратимого не выполняет |\n| Success | После подготовки подключения: `Данные подключения готовы` и кнопка `Открыть инструкцию` |\n| Destructive | N/A — удаление устройства выполняется на отдельном экране с явным подтверждением |"
+              }
+            },
+            {
+              "assertion": "Provides at least one ScreenSpec with purpose, content, primary and secondary actions, navigation, semantic icon tokens, and state variants.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "## ScreenSpec\n\n```yaml\nid: home_active\npurpose: показать состояние подписки и дать быстро подключить VPN\ncontent:\n  heading: VPN готов к работе\n  status: Подписка активна до 24 сентября\n  supporting: Устройств: 2 из 5\nprimary_action:\n  label: Подключить VPN\n  intent: connection_setup\n  icon_token: connect\nsecondary_actions:\n  - label: Подписка\n    intent: subscription_details\n    icon_token: payment\n  - label: Устройства\n    intent: device_list\n    icon_token: devices\n  - label: Локации\n    intent: server_list\n    icon_token: servers\n  - label: Поддержка\n    intent: support_start\n    icon_token: support\nnavigation:\n  back: false\n  home: false\n  edit_in_place: true\n```\n\nДля истёкшей подписки заголовок меняется на `Доступ приостановлен`, статус — на `Подписка закончилась 24 сентября`, а primary-кнопка — на `Выбрать тариф`."
+              }
+            },
+            {
+              "assertion": "Defines a native screen with one clear primary action, grouped secondary actions, and labels that remain understandable without icons.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Inline-клавиатура:\n\n```text\n┌──────────────────────────────────┐\n│ [connect] Подключить VPN         │  primary\n├─────────────────┬────────────────┤\n│ [payment]       │ [devices]      │\n│ Подписка        │ Устройства     │\n├─────────────────┼────────────────┤\n│ [servers]       │ [support]      │\n│ Локации         │ Поддержка      │\n└─────────────────┴────────────────┘\n```"
+              }
+            },
+            {
+              "assertion": "Uses the cover for brand or context while keeping critical status and actions in Telegram text, and defines stable edit-in-place navigation.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "| Поверхность | Нативное сообщение: фото-баннер, HTML-caption и inline-клавиатура |\n| Роль баннера | Бренд и атмосфера; никаких тарифов, дат или кнопок внутри изображения |\n| Иерархия | `Подключить VPN` — primary; остальные действия — обычные |\n| Навигация | Внутренние экраны редактируют текущее сообщение; возврат ведёт в главное меню |"
+              }
+            },
+            {
+              "assertion": "Makes explicit design decisions for loading, empty, error, confirmation, success, and destructive states, marking genuinely inapplicable states rather than silently omitting them.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "## Состояния\n\n| Состояние | Текст и поведение |\n|---|---|\n| Loading | `Обновляем статус VPN…` Повторные действия временно не показываются; доступна только поддержка |\n| Empty | `Устройств пока нет` и основная кнопка `Подключить VPN` |\n| Error | `Не удалось обновить статус. Подписка и настройки не изменены.` Кнопки `Повторить` и `Поддержка` |\n| Confirmation | N/A — главное меню только открывает другие экраны и ничего необратимого не выполняет |\n| Success | После подготовки подключения: `Данные подключения готовы` и кнопка `Открыть инструкцию` |\n| Destructive | N/A — удаление устройства выполняется на отдельном экране с явным подтверждением |"
+              }
+            },
+            {
+              "assertion": "Uses restrained semantic icon tokens under one exact pack or coherence lock rather than assigning decorative emoji by quota.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "## Система иконок\n\nСтиль-лок: `vpn_ui_adaptive_v1` — тонкие монохромные контурные пиктограммы, одинаковая толщина линий, без анимации, с адаптивной перекраской Telegram.\n\n| Токен | Образ | Назначение |\n|---|---|---|\n| `status_secure` | щит с галочкой | Состояние аккаунта |\n| `connect` | штекер или защищённое соединение | Подключение VPN |\n| `payment` | банковская карта | Подписка |\n| `devices` | телефон и ноутбук | Устройства |\n| `servers` | метка локации | Серверы |\n| `support` | гарнитура | Поддержка |\n\nВ реализации токены разрешаются только в проверенные `custom_emoji_id`. Числовые ID нельзя придумывать. Если бот не имеет подходящей capability через дополнительный Fragment username либо Premium владельца в поддерживаемом типе чата, `icon_custom_emoji_id` убирается сразу у всех кнопок. Текстовые подписи остаются полными."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects filler emoji, mixed visual families, decorative emphasis on every button, and critical information available only in the banner.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Ниже — готовый нативный экран: спокойный premium-визуал, один очевидный CTA, без Mini App и перегруза эмодзи.\n\n## PresentationBrief\n\n| Параметр | Решение |\n|---|---|\n| Аудитория | Пользователи VPN без необходимости разбираться в технических деталях |\n| Главная задача | Быстро подключить новое устройство |\n| Тон | Спокойный, уверенный, технологичный |\n| Поверхность | Нативное сообщение: фото-баннер, HTML-caption и inline-клавиатура |\n| Роль баннера | Бренд и атмосфера; никаких тарифов, дат или кнопок внутри изображения |\n| Иерархия | `Подключить VPN` — primary; остальные действия — обычные |\n| Навигация | Внутренние экраны редактируют текущее сообщение; возврат ведёт в главное меню |\n| Иконки | Один набор монохромных custom emoji; при недоступности весь экран показывается без иконок |\n\n## Система иконок\n\nСтиль-лок: `vpn_ui_adaptive_v1` — тонкие монохромные контурные пиктограммы, одинаковая толщина линий, без анимации, с адаптивной перекраской Telegram.\n\n| Токен | Образ | Назначение |\n|---|---|---|\n| `status_secure` | щит с галочкой | Состояние аккаунта |\n| `connect` | штекер или защищённое соединение | Подключение VPN |\n| `payment` | банковская карта | Подписка |\n| `devices` | телефон и ноутбук | Устройства |\n| `servers` | метка локации | Серверы |\n| `support` | гарнитура | Поддержка |"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "custom-emoji-capability-selection",
+      "conditions": {
+        "control": {
+          "retrieval": [
+            {
+              "assertion": "Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance.",
+              "passed": false,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [],
+                "reason": "The control case_paths list is empty, so neither expected reference is present."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Corrects the premise that a bot has Premium and does not treat owner Premium as universal or channel capability.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control says Premium must be active for the bot owner and treats that as the enabling premise; it never states that a bot is not a Premium user and does not correctly exclude channel capability."
+              }
+            },
+            {
+              "assertion": "Makes the model emit semantic tokens and resolves them pack-first under a coherence lock with deterministic fallbacks ending in no icon.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The model chooses closed semantic keys and an unknown value can yield no custom emoji, but the control defines no pack-first resolver under an explicit coherence lock with a deterministic fallback chain."
+              }
+            },
+            {
+              "assertion": "Uses only verified registry IDs and requires explicit license and provenance instead of treating a public pack link as permission to redistribute.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control verifies Telegram IDs, but it records neither license nor provenance and treats selection from a public pack as sufficient source guidance."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects invented custom emoji IDs, arbitrary cross-pack mixing, unlicensed repacking, and the claim that owner Premium makes button icons work everywhere.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The control rejects invented IDs and recommends one pack, but it does not reject unlicensed repacking and repeats the incorrect owner-Premium premise for channel use."
+              }
+            }
+          ]
+        },
+        "treatment": {
+          "retrieval": [
+            {
+              "assertion": "Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance.",
+              "passed": true,
+              "evidence": {
+                "kind": "retrieval_trace",
+                "paths": [
+                  "SKILL.md",
+                  "references/presentation-and-ux.md",
+                  "references/dialogs-and-ui.md",
+                  "references/custom-emoji-system.md"
+                ],
+                "reason": "Both expected references are present in the treatment case_paths; under the stipulated all-expected-present rule, the two additional paths do not make retrieval fail."
+              }
+            }
+          ],
+          "application": [
+            {
+              "assertion": "Corrects the premise that a bot has Premium and does not treat owner Premium as universal or channel capability.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Критичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют."
+              }
+            },
+            {
+              "assertion": "Makes the model emit semantic tokens and resolves them pack-first under a coherence lock with deterministic fallbacks ending in no icon.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "ИИ выбирает не ID, а только семантический токен из закрытого списка:\n\n```json\n{\n  \"token\": \"payment\",\n  \"role\": \"action\",\n  \"state\": \"default\",\n  \"polarity\": \"neutral\"\n}\n```\n\nДальше обычный детерминированный код:\n\n1. Проверяет тип чата и разрешённую capability.\n2. Фиксирует один `pack_id` на весь экран или диалог.\n3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.\n4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.\n5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.\n6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.\n\nВ aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:\n\n```python\nInlineKeyboardButton(\n    text=\"Оплатить\",\n    callback_data=\"pay\",\n    icon_custom_emoji_id=registry.resolve(\n        token=\"payment\",\n        role=\"action\",\n        target_chat_type=chat.type,\n    ),\n)\n```"
+              }
+            },
+            {
+              "assertion": "Uses only verified registry IDs and requires explicit license and provenance instead of treating a public pack link as permission to redistribute.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:\n\n```yaml\npack_id: bot_ui_adaptive\ntelegram_set_name: bot_ui_adaptive_by_<bot_username>\ncoherence_group: bot_ui_v1\nsource: lucide\nlicense_spdx: ISC\nneeds_repainting: true\nstatus: awaiting_telegram_verification\n\nemoji:\n  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}\n  profile: {asset: user-round, custom_emoji_id: null, enabled: false}\n  servers: {asset: server, custom_emoji_id: null, enabled: false}\n  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}\n  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}\n  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}\n  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}\n```\n\nПосле публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.\n\nПубличные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным."
+              }
+            }
+          ],
+          "gap": [
+            {
+              "assertion": "Rejects invented custom emoji IDs, arbitrary cross-pack mixing, unlicensed repacking, and the claim that owner Premium makes button icons work everywhere.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:\n\n```yaml\npack_id: bot_ui_adaptive\ntelegram_set_name: bot_ui_adaptive_by_<bot_username>\ncoherence_group: bot_ui_v1\nsource: lucide\nlicense_spdx: ISC\nneeds_repainting: true\nstatus: awaiting_telegram_verification\n\nemoji:\n  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}\n  profile: {asset: user-round, custom_emoji_id: null, enabled: false}\n  servers: {asset: server, custom_emoji_id: null, enabled: false}\n  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}\n  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}\n  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}\n  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}\n```\n\nПосле публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.\n\nПубличные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным.\n\nИИ выбирает не ID, а только семантический токен из закрытого списка:\n\n```json\n{\n  \"token\": \"payment\",\n  \"role\": \"action\",\n  \"state\": \"default\",\n  \"polarity\": \"neutral\"\n}\n```\n\nДальше обычный детерминированный код:\n\n1. Проверяет тип чата и разрешённую capability.\n2. Фиксирует один `pack_id` на весь экран или диалог.\n3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.\n4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.\n5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.\n6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.\n\nВ aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:\n\n```python\nInlineKeyboardButton(\n    text=\"Оплатить\",\n    callback_data=\"pay\",\n    icon_custom_emoji_id=registry.resolve(\n        token=\"payment\",\n        role=\"action\",\n        target_chat_type=chat.type,\n    ),\n)\n```\n\nКритичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют."
               }
             }
           ]

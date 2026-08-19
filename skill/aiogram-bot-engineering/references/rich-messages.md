@@ -15,8 +15,9 @@ objects.
 
 Keep user-provided text and IDs separate from construction, validate the
 business action before sending, and select the simple source (`html` or
-`markdown`) unless the layout needs structured `blocks`. This is a minimal
-structured construction using a custom emoji text node:
+`markdown`) unless the layout needs structured `blocks`. Resolve IDs and their
+alternative emoji through [the custom emoji system](custom-emoji-system.md)
+before construction. This is a minimal structured custom-emoji text node:
 
 ```python
 from aiogram import Bot
@@ -27,18 +28,36 @@ from aiogram.types import (
 )
 
 
-rich_message = InputRichMessage(
-    blocks=[
-        InputRichBlockParagraph(
-            text=RichTextCustomEmoji(
-                custom_emoji_id="5368324170671202286",
-                alternative_text="star",
+def build_status_message(
+    verified_custom_emoji_id: str | None,
+    reviewed_alternative_emoji: str | None,
+) -> InputRichMessage:
+    if verified_custom_emoji_id is None or reviewed_alternative_emoji is None:
+        return InputRichMessage(html="Status")
+
+    return InputRichMessage(
+        blocks=[
+            InputRichBlockParagraph(
+                text=RichTextCustomEmoji(
+                    custom_emoji_id=verified_custom_emoji_id,
+                    alternative_text=reviewed_alternative_emoji,
+                )
             )
-        )
-    ]
+        ]
+    )
+
+
+rich_message = build_status_message(
+    verified_custom_emoji_id=registry_entry.custom_emoji_id,
+    reviewed_alternative_emoji=registry_entry.rich_text_alternative_emoji,
 )
 await bot.send_rich_message(chat_id=chat_id, rich_message=rich_message)
 ```
+
+The guard narrows both optional registry values before constructing
+`RichTextCustomEmoji`. The API field named `alternative_text` expects an
+alternative Unicode emoji, not a prose description such as `star` or
+`payment`. When either value is unavailable, the example sends ordinary text.
 
 Escape untrusted text for the exact selected context: HTML escaping is not
 Markdown escaping, and neither is safe to interpolate into URLs, attributes,

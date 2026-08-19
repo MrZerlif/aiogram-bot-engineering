@@ -1,12 +1,16 @@
 # Results with skill — recorded treatment run
 
-Run `treatment-20260819-r3`, produced by `/root/eval_treatment_round3` on
-2026-08-19 after the gap-driven skill revision. The runner received the ten
-prompt texts directly, read `SKILL.md` and a shared batch of its routed
-resources, and confirmed it did not read eval rubrics, tests, README, prior
-results, git history, or web content. The exact deployed model revision was not
-exposed. See [`retrieval-trace.json`](retrieval-trace.json) for the self-reported
-read set and [`run-manifest.json`](run-manifest.json) for protocol and hashes.
+Run `treatment-20260820-composite-r7` combines the original ten-case runner
+`/root/eval_treatment_round3` with fresh isolated runners
+`/root/final_treatment_native_r2` and `/root/final_treatment_emoji_r2` on
+2026-08-19 and 2026-08-20. Each runner received prompt text directly, read `SKILL.md` and only
+locally routed resources, and confirmed it did not read eval rubrics, tests,
+README, prior results, git history, or web content. The exact deployed model
+revision was not exposed. The isolated runners were given frozen bundle SHA-256
+`cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150`.
+See [`retrieval-trace.json`](retrieval-trace.json)
+for each case's self-reported read set and [`run-manifest.json`](run-manifest.json)
+for protocol and hashes.
 
 ## fsm-linear-flow
 
@@ -67,3 +71,248 @@ For payments, feed the same successful-payment update twice and assert one charg
 Give the order-confirmation handler an injected Unit of Work containing repositories, an outbox, and one explicit transaction. After defensively parsing the callback, load and lock the order, resolve current authorization server-side, and enforce the expected version and confirmable state. Insert an update/callback idempotency key under a unique constraint in the same transaction as the state transition and outbox event. A duplicate should return the previously recorded outcome; expected denial should not mutate, and unexpected failure should roll back and reach centralized error handling. Acknowledge success only after commit.
 
 Retry transient database failures at the application boundary with bounded backoff and jitter, starting a fresh Unit of Work each attempt. Do not retry authorization or validation failures, and rely on the idempotency constraint to prevent duplicate effects. Emit structured logs with correlation ID, safe order/user identifiers, attempt, decision, duration, and error class while redacting callback contents and secrets. Create trace spans around update handling, authorization/query, transaction commit, outbox publication, and worker processing; persist trace context with the outbox record. Track latency, rollback/error classes, retry counts, idempotency conflicts, outbox age, and confirmation outcomes, with alerts tied to service objectives.
+
+## native-presentation-anti-slop
+
+Ниже — готовый нативный экран: спокойный premium-визуал, один очевидный CTA, без Mini App и перегруза эмодзи.
+
+## PresentationBrief
+
+| Параметр | Решение |
+|---|---|
+| Аудитория | Пользователи VPN без необходимости разбираться в технических деталях |
+| Главная задача | Быстро подключить новое устройство |
+| Тон | Спокойный, уверенный, технологичный |
+| Поверхность | Нативное сообщение: фото-баннер, HTML-caption и inline-клавиатура |
+| Роль баннера | Бренд и атмосфера; никаких тарифов, дат или кнопок внутри изображения |
+| Иерархия | `Подключить VPN` — primary; остальные действия — обычные |
+| Навигация | Внутренние экраны редактируют текущее сообщение; возврат ведёт в главное меню |
+| Иконки | Один набор монохромных custom emoji; при недоступности весь экран показывается без иконок |
+
+## Система иконок
+
+Стиль-лок: `vpn_ui_adaptive_v1` — тонкие монохромные контурные пиктограммы, одинаковая толщина линий, без анимации, с адаптивной перекраской Telegram.
+
+| Токен | Образ | Назначение |
+|---|---|---|
+| `status_secure` | щит с галочкой | Состояние аккаунта |
+| `connect` | штекер или защищённое соединение | Подключение VPN |
+| `payment` | банковская карта | Подписка |
+| `devices` | телефон и ноутбук | Устройства |
+| `servers` | метка локации | Серверы |
+| `support` | гарнитура | Поддержка |
+
+В реализации токены разрешаются только в проверенные `custom_emoji_id`. Числовые ID нельзя придумывать. Если бот не имеет подходящей capability через дополнительный Fragment username либо Premium владельца в поддерживаемом типе чата, `icon_custom_emoji_id` убирается сразу у всех кнопок. Текстовые подписи остаются полными.
+
+## Карта экрана
+
+```text
+/start
+  └─ Обновление статуса
+       ├─ Главное меню: подписка активна
+       │    ├─ Подключить VPN → выбор устройства / инструкция
+       │    ├─ Подписка → сведения и продление
+       │    ├─ Устройства → список устройств
+       │    ├─ Локации → список серверов
+       │    └─ Поддержка → обращение
+       ├─ Главное меню: подписка закончилась
+       │    └─ Выбрать тариф → тарифы
+       └─ Ошибка загрузки
+            ├─ Повторить
+            └─ Поддержка
+```
+
+Все переходы внутри меню редактируют исходное сообщение. Новый отдельный message нужен только для долговечных событий, например чека об оплате или ответа оператора.
+
+## Состояния
+
+| Состояние | Текст и поведение |
+|---|---|
+| Loading | `Обновляем статус VPN…` Повторные действия временно не показываются; доступна только поддержка |
+| Empty | `Устройств пока нет` и основная кнопка `Подключить VPN` |
+| Error | `Не удалось обновить статус. Подписка и настройки не изменены.` Кнопки `Повторить` и `Поддержка` |
+| Confirmation | N/A — главное меню только открывает другие экраны и ничего необратимого не выполняет |
+| Success | После подготовки подключения: `Данные подключения готовы` и кнопка `Открыть инструкцию` |
+| Destructive | N/A — удаление устройства выполняется на отдельном экране с явным подтверждением |
+
+## ScreenSpec
+
+```yaml
+id: home_active
+purpose: показать состояние подписки и дать быстро подключить VPN
+content:
+  heading: VPN готов к работе
+  status: Подписка активна до 24 сентября
+  supporting: Устройств: 2 из 5
+primary_action:
+  label: Подключить VPN
+  intent: connection_setup
+  icon_token: connect
+secondary_actions:
+  - label: Подписка
+    intent: subscription_details
+    icon_token: payment
+  - label: Устройства
+    intent: device_list
+    icon_token: devices
+  - label: Локации
+    intent: server_list
+    icon_token: servers
+  - label: Поддержка
+    intent: support_start
+    icon_token: support
+navigation:
+  back: false
+  home: false
+  edit_in_place: true
+```
+
+Для истёкшей подписки заголовок меняется на `Доступ приостановлен`, статус — на `Подписка закончилась 24 сентября`, а primary-кнопка — на `Выбрать тариф`.
+
+## Баннер
+
+Формат: `1280 × 720`, 16:9.
+
+Композиция:
+
+- фон — мягкий градиент от `#070B16` к `#101B34`;
+- справа — объёмный полупрозрачный щит и две тонкие дуги маршрута;
+- акценты — холодный cyan `#6EE7F9` и приглушённый violet `#8B5CF6`;
+- слева — небольшой логотип и название продукта;
+- не менее 40% свободного пространства;
+- без людей, устройств, дат, тарифов, слоганов и нарисованных кнопок.
+
+Готовый промпт для генерации:
+
+> Premium minimalist VPN brand banner, 16:9, deep midnight navy gradient, elegant translucent glass shield on the right, two subtle encrypted routing arcs, restrained cyan and violet highlights, fine soft grain, generous negative space, calm commercial SaaS aesthetic, no people, no devices, no UI buttons, no pricing, no status text, no stock-photo look.
+
+Баннер декоративный: вся важная информация остаётся в Telegram-тексте.
+
+## Готовый экран
+
+Caption с `parse_mode=HTML`:
+
+```html
+[icon: status_secure] <b>VPN готов к работе</b>
+
+Подписка активна до <b>24 сентября</b>
+Устройств: <b>2 из 5</b>
+
+Выберите действие.
+```
+
+Обозначения `[icon: …]` — семантические токены для реализации, а не видимый пользователю текст.
+
+Inline-клавиатура:
+
+```text
+┌──────────────────────────────────┐
+│ [connect] Подключить VPN         │  primary
+├─────────────────┬────────────────┤
+│ [payment]       │ [devices]      │
+│ Подписка        │ Устройства     │
+├─────────────────┼────────────────┤
+│ [servers]       │ [support]      │
+│ Локации         │ Поддержка      │
+└─────────────────┴────────────────┘
+```
+
+Конкретные callback-идентификаторы:
+
+```text
+home:connect
+home:subscription
+home:devices
+home:servers
+home:support
+```
+
+Идентификаторы считаются недоверенным вводом: обработчик заново получает данные пользователя, проверяет доступ и подтверждает callback через `answer()`.
+
+Для этого экрана достаточно обычного aiogram-handler с нативным `InlineKeyboardMarkup`. Цветовой стиль `primary` получает только `Подключить VPN`; остальные кнопки остаются стандартными.
+
+Статическая anti-slop проверка пройдена: один главный CTA, один набор иконок, нет повторения текста в баннере, кнопки понятны без цвета и эмодзи. Перед релизом остаётся проверить Telegram на iOS/Android, светлую и тёмную темы, узкий экран, длинные даты и полностью отключённые custom emoji.
+
+## custom-emoji-capability-selection
+
+Итоговый выбор — один адаптивный монохромный набор `bot_ui_adaptive`, без смешивания разных Telegram-паков. Основа — популярное открытое семейство Lucide (ISC), из которого создаётся собственный Telegram custom emoji set с `needs_repainting=true`.
+
+| Токен | Подпись кнопки | Иконка Lucide | Назначение |
+|---|---|---|---|
+| `payment` | Оплатить | `credit-card` | оплата или продление |
+| `profile` | Профиль | `user-round` | личный кабинет |
+| `servers` | Серверы | `server` | выбор сервера |
+| `support` | Поддержка | `life-buoy` | обращение в поддержку |
+| `back` | Назад | `arrow-left` | навигация назад |
+| `warning` | Проверить проблему | `triangle-alert` | предупреждение, но не ошибка |
+| `delete` | Удалить сервер | `trash-2` | необратимое удаление |
+
+Подписи остаются полными: custom emoji только ускоряет распознавание и никогда не заменяет текст. `delete` получает стиль `danger` и отдельный экран подтверждения с названием объекта и последствиями. `payment` может быть `primary`, если это главное действие экрана; `back`, `profile`, `servers` и `support` обычно остаются обычными.
+
+Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:
+
+```yaml
+pack_id: bot_ui_adaptive
+telegram_set_name: bot_ui_adaptive_by_<bot_username>
+coherence_group: bot_ui_v1
+source: lucide
+license_spdx: ISC
+needs_repainting: true
+status: awaiting_telegram_verification
+
+emoji:
+  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}
+  profile: {asset: user-round, custom_emoji_id: null, enabled: false}
+  servers: {asset: server, custom_emoji_id: null, enabled: false}
+  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}
+  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}
+  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}
+  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}
+```
+
+После публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.
+
+Публичные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным.
+
+ИИ выбирает не ID, а только семантический токен из закрытого списка:
+
+```json
+{
+  "token": "payment",
+  "role": "action",
+  "state": "default",
+  "polarity": "neutral"
+}
+```
+
+Дальше обычный детерминированный код:
+
+1. Проверяет тип чата и разрешённую capability.
+2. Фиксирует один `pack_id` на весь экран или диалог.
+3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.
+4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.
+5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.
+6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.
+
+В aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:
+
+```python
+InlineKeyboardButton(
+    text="Оплатить",
+    callback_data="pay",
+    icon_custom_emoji_id=registry.resolve(
+        token="payment",
+        role="action",
+        target_chat_type=chat.type,
+    ),
+)
+```
+
+Критичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют.
+
+Поэтому есть только два корректных режима:
+
+- Для иконок действительно везде, включая канал: приобрести для бота требуемое дополнительное имя пользователя на Fragment и настроить capability `fragment_username`. В канале использовать inline-клавиатуру.
+- Если остаётся только Premium владельца: показывать custom emoji в private/group/supergroup, а в канале автоматически отправлять те же кнопки с полными текстовыми подписями, но без `icon_custom_emoji_id`.
+
+Если отправка с иконкой всё же отклонена из-за устаревшей capability, бот один раз повторяет построение экрана без иконок и пишет структурированное предупреждение в журнал, не зацикливая повторные отправки.

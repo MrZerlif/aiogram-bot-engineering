@@ -141,8 +141,11 @@ dp.errors.register(recover_dialog, ExceptionTypeFilter(UnknownState))
 
 Use `Style` from the style module, not the keyboard module. `StyleCase` is the
 conditional variant when a getter determines the style; use plain `Style` for
-one fixed appearance. This construction is version-targeted to aiogram 3.30.0
-and aiogram-dialog 2.6.0:
+one fixed appearance. Choose `primary`, `success`, and `danger` for their
+semantic roles, not as decoration. Read [presentation and UX](presentation-and-ux.md)
+before composing the screen and [the custom emoji system](custom-emoji-system.md)
+before resolving an icon. This construction is version-targeted to aiogram
+3.30.0 and aiogram-dialog 2.6.0:
 
 ```python
 from aiogram.enums import ButtonStyle
@@ -151,15 +154,20 @@ from aiogram_dialog.widgets.style import Style
 from aiogram_dialog.widgets.text import Const
 
 
-open_button = Button(
-    Const("Open"),
-    id="open",
-    style=Style(
-        style=ButtonStyle.SUCCESS,
-        emoji_id="5368324170671202286",
-    ),
-)
+def build_open_button(verified_custom_emoji_id: str | None) -> Button:
+    return Button(
+        Const("Open"),
+        id="open",
+        style=Style(
+            style=ButtonStyle.PRIMARY,
+            emoji_id=verified_custom_emoji_id,
+        ),
+    )
 ```
+
+Pass only an enabled ID returned by the project's verified semantic registry.
+Pass `None` when the capability or a coherent icon is unavailable; the text
+label remains the complete control.
 
 For API details, see the [official aiogram documentation](https://docs.aiogram.dev/)
 and [official aiogram-dialog documentation](https://aiogram-dialog.readthedocs.io/).
