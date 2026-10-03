@@ -1,12 +1,12 @@
 # Baseline without skill — recorded control run
 
-Run `control-20260819-composite-r2` combines `/root/eval_baseline_run`,
-`/root/baseline_native_ui`, and `/root/baseline_emoji_system` on 2026-08-19.
-The original runner received ten prompt texts directly; two later independent
-control runners received the presentation and custom-emoji prompts without
-repository context. All control runners confirmed they
-did not read the repository skill, rubrics, tests, README, result artifacts, or
-web content. The exact deployed model revision was not exposed. See
+Run `control-20260820-composite-r3` combines retained and fresh isolated control
+evidence. Eight unaffected engineering cases retain the historical control,
+and the presentation case retains its prior isolated control. The three
+affected prompts (`dialog-widget-ui`, `custom-emoji-capability-selection`, and
+`webhook-secret`) were freshly rerun in `/root/eval_control_delivery_registry`
+without repository, skill, rubric, result-artifact, or web context. The exact
+deployed model revision was not exposed. See
 [`run-manifest.json`](run-manifest.json) for the recorded protocol and hashes.
 
 ## fsm-linear-flow
@@ -23,9 +23,102 @@ Isolation depends on storage keys, not merely on scene code. Configure FSM stora
 
 ## dialog-widget-ui
 
-Build one `Dialog` window whose getter returns persisted settings plus the current page. Use a `Checkbox` for the boolean setting, a paginated `ScrollingGroup` or paged `Select` for the list, navigation controls, and a `Button` for confirmation. Give every widget a stable, unique ID. The checkbox callback updates only dialog-local draft data and re-renders; page navigation changes the dialog page without mutating the saved settings. The getter should derive checked state and visible rows from the draft so the UI remains deterministic after every callback.
+Use `aiogram-dialog` as one router inside the native aiogram application. Keep edits in `dialog_data`; write them to storage only when the user confirms.
 
-The confirm callback must validate the complete draft and save it in a transaction, then show success or close the dialog. Keep persistent settings in the database and temporary edits in `dialog_data`; do not use process-global state. Treat callbacks as untrusted: verify the acting user owns the dialog, reject unavailable item IDs, and make confirmation idempotent so double taps do not duplicate side effects. A cancel action should discard the draft. Test initial rendering, toggle on/off, first/middle/last page boundaries, empty lists, persistence failures, double confirmation, and reopening the dialog from stored values.
+```python
+class SettingsSG(StatesGroup):
+    main = State()
+
+async def getter(dialog_manager: DialogManager, **_):
+    selected = dialog_manager.dialog_data.get("server", "eu-1")
+    return {
+        "servers": [
+            {"id": key, "title": f"{'✓ ' if key == selected else ''}{name}"}
+            for key, name in SERVERS
+        ]
+    }
+
+async def select_server(
+    query: CallbackQuery, widget, manager: DialogManager, item_id: str
+):
+    manager.dialog_data["server"] = item_id
+
+async def confirm(query: CallbackQuery, button, manager: DialogManager):
+    settings = {
+        "notifications": manager.find("notifications").is_checked(),
+        "server": manager.dialog_data.get("server", "eu-1"),
+    }
+    await repository.save(query.from_user.id, settings)
+    await query.answer("Settings saved")
+
+settings_dialog = Dialog(
+    Window(
+        Const("Settings"),
+        Checkbox(
+            Const("🔔 Notifications: on"),
+            Const("🔕 Notifications: off"),
+            id="notifications",
+            on_state_changed=lambda e, w, m:
+                m.dialog_data.__setitem__("notifications", w.is_checked()),
+        ),
+        ScrollingGroup(
+            Select(
+                Format("{item[title]}"),
+                id="server",
+                item_id_getter=lambda item: item["id"],
+                items="servers",
+                on_click=select_server,
+            ),
+            id="pages",
+            width=1,
+            height=3,
+        ),
+        Group(
+            PrevPage(scroll="pages", text=Const("◀")),
+            CurrentPage(scroll="pages", text=Format("{current_page1}/{pages}")),
+            NextPage(scroll="pages", text=Const("▶")),
+            width=3,
+        ),
+        Button(Const("✅ Confirm"), id="confirm", on_click=confirm),
+        getter=getter,
+        state=SettingsSG.main,
+    )
+)
+```
+
+A native command opens it:
+
+```python
+@native_router.message(Command("settings"))
+async def open_settings(message: Message, dialog_manager: DialogManager):
+    current = await repository.load(message.from_user.id)
+    await dialog_manager.start(
+        SettingsSG.main,
+        data=current,
+        mode=StartMode.RESET_STACK,
+    )
+```
+
+Use Redis rather than `MemoryStorage`, but still handle expired stacks and states removed by a deployment. Central recovery should answer the stale callback and reset the whole dialog stack:
+
+```python
+@dp.error(ExceptionTypeFilter(UnknownIntent))
+async def stale_dialog(event: ErrorEvent, dialog_manager: DialogManager):
+    query = event.update.callback_query
+    if query is None:
+        raise event.exception
+
+    await query.answer("This screen expired; opening a fresh one.", show_alert=True)
+    current = await repository.load(query.from_user.id)
+    await dialog_manager.start(
+        SettingsSG.main,
+        data=current,
+        mode=StartMode.RESET_STACK,
+    )
+    return True
+```
+
+Add the pinned library version’s specific unknown-window/state exception to that filter. Register a final catch-all callback router after all legitimate callback routers for stale callbacks that become merely unhandled. Do not catch arbitrary exceptions, because database and programming errors must remain observable.
 
 ## mini-app-launch-security
 
@@ -47,9 +140,71 @@ Process payment in a database transaction with a lock or conditional state trans
 
 ## webhook-secret
 
-Expose a single POST endpoint behind a TLS-terminating reverse proxy and configure `setWebhook` with a high-entropy `secret_token`. For every request, compare Telegram’s secret-token header to the configured value before parsing or dispatching the update, using a constant-time comparison where practical. Missing or incorrect secrets should receive an immediate 401 or 403 and must never reach bot middleware. Keep the secret in a secret manager, separate from the bot token, and support rotation by updating Telegram and the deployment deliberately.
+Terminate TLS at a trusted HTTPS proxy and configure Telegram’s standard secret header:
 
-Use HTTPS with valid certificates, restrict the endpoint to POST and the expected content type, cap body size and request duration, and apply conservative rate limits. A random URL path and Telegram IP allowlisting can add defense in depth, but neither replaces the secret header; IP rules must account for trusted-proxy configuration so clients cannot spoof forwarding headers. Return success quickly after safely accepting an authenticated update, while durable processing handles longer work. Log authentication failures without logging secrets or full update bodies. Test absent, incorrect, and correct headers, oversized and malformed bodies, proxy header spoofing, duplicate updates, and behavior during secret rotation.
+```python
+await bot.set_webhook(
+    url="https://bot.example.com/telegram/update",
+    secret_token=settings.webhook_secret,
+    allowed_updates=dispatcher.resolve_used_update_types(),
+    drop_pending_updates=False,
+)
+```
+
+Generate the secret independently of the bot token, keep it in a secret manager, and preserve `X-Telegram-Bot-Api-Secret-Token` through the proxy. Authenticate before reading or parsing the request body, using constant-time comparison:
+
+```python
+async def webhook(request: web.Request):
+    supplied = request.headers.get(
+        "X-Telegram-Bot-Api-Secret-Token", ""
+    )
+    if not supplied or not secrets.compare_digest(
+        supplied, request.app["webhook_secret"]
+    ):
+        return web.Response(status=404)
+
+    try:
+        raw = await request.json()
+        update_id = int(raw["update_id"])
+        Update.model_validate(raw, context={"bot": request.app["bot"]})
+    except (ValueError, TypeError, KeyError):
+        return web.Response(status=400)
+
+    try:
+        async with request.app["pool"].acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    INSERT INTO telegram_update_inbox
+                        (bot_id, update_id, payload, state)
+                    VALUES ($1, $2, $3::jsonb, 'pending')
+                    ON CONFLICT (bot_id, update_id) DO NOTHING
+                    """,
+                    request.app["bot"].id,
+                    update_id,
+                    json.dumps(raw),
+                )
+    except Exception:
+        return web.Response(status=503)
+
+    return web.Response(status=200, text="ok")
+```
+
+The `(bot_id, update_id)` primary key makes Telegram retries idempotent. Return success only after the transaction has committed to storage configured for durable synchronous commits. An in-memory `asyncio.Queue` or background handler is not acceptance; if storage is unavailable, return `503` so Telegram retries.
+
+Run a fixed worker pool. Workers claim rows atomically with `FOR UPDATE SKIP LOCKED` and a lease, call `dispatcher.feed_raw_update`, then mark the row complete. On failure they schedule a bounded retry and eventually dead-letter it. Processing remains at-least-once: a crash after an external side effect but before `mark_done` can repeat that side effect. Use an idempotency key such as `(bot_id, update_id, operation)` or a transactional outbox for payments and other loss-sensitive actions.
+
+The safest polling alternative creates no handler tasks:
+
+```python
+await dispatcher.start_polling(
+    bot,
+    handle_as_tasks=False,
+    allowed_updates=dispatcher.resolve_used_update_types(),
+)
+```
+
+Where supported, bounded parallelism can use `handle_as_tasks=True, tasks_concurrency_limit=32`. A semaphore inside already-created handlers does not prevent an unbounded number of waiting tasks. For webhook-equivalent durability, let sequential polling only insert into the same durable inbox while the fixed workers perform slow work.
 
 ## background-jobs
 
@@ -170,121 +325,41 @@ no padlock icons, no buttons, no people, 16:9
 
 ## custom-emoji-capability-selection
 
-Сразу важное ограничение: я не стану придумывать 19-значные `custom_emoji_id`. ID принадлежит конкретному эмодзи, а не набору целиком, и его необходимо получить из Telegram и проверить через Bot API. Неверный ID даст пустую иконку или ошибку.
+Числовые `custom_emoji_id` нельзя надёжно придумать или восстановить по виду emoji: это непрозрачные Telegram ID. Кроме того, Bot API не предоставляет рейтинг популярности публичных наборов. Поэтому правильный способ «самому выбрать ID» — взять утверждённый список ссылок `t.me/addemoji/<short_name>`, вызвать `getStickerSet`, выбрать подходящие элементы и зафиксировать реальные ID в lock-файле.
 
-Я бы зафиксировал такой единообразный набор:
+Семантические предпочтения:
 
-| Ключ | Образ | Текст кнопки | Unicode-fallback |
-|---|---|---|---|
-| `payment` | банковская карта | Оплатить | 💳 |
-| `profile` | силуэт пользователя | Профиль | 👤 |
-| `servers` | стойка серверов | Серверы | 🖥️ |
-| `support` | гарнитура | Поддержка | 🎧 |
-| `back` | стрелка влево | Назад | ◀️ |
-| `warning` | жёлтый треугольник | Внимание | ⚠️ |
-| `delete` | красная корзина | Удалить | 🗑️ |
+- оплата: `💳`, резерв `💰`;
+- профиль: `👤`;
+- серверы: `🖥️`, резерв `🌐`;
+- поддержка: `🛟`, резерв `💬`;
+- назад: `⬅️`, резерв `↩️`;
+- предупреждение: `⚠️`, резерв `❗`;
+- удаление: `🗑️`, резерв `❌`.
 
-Лучше брать все семь эмодзи из одного публичного набора с простыми пиктограммами, а не смешивать 3D, неон и рисованные персонажи.
+Резолвер принимает только наборы типа `custom_emoji`, сопоставляет `Sticker.emoji` с этими базовыми символами и сохраняет `Sticker.custom_emoji_id` строкой, чтобы JavaScript не потерял точность.
 
-### Как получить настоящие ID
-
-Владелец отправляет боту выбранные семь custom emoji одним сообщением строго в указанном порядке. Временный обработчик извлекает их ID:
-
-```python
-from aiogram import F, Router
-from aiogram.enums import MessageEntityType
-from aiogram.types import Message
-
-router = Router()
-
-ORDER = (
-    "payment",
-    "profile",
-    "servers",
-    "support",
-    "back",
-    "warning",
-    "delete",
-)
-
-
-@router.message(F.entities)
-async def register_button_emojis(message: Message) -> None:
-    entities = sorted(message.entities or [], key=lambda entity: entity.offset)
-
-    ids = [
-        entity.custom_emoji_id
-        for entity in entities
-        if entity.type == MessageEntityType.CUSTOM_EMOJI
-        and entity.custom_emoji_id
-    ]
-
-    if len(ids) != len(ORDER):
-        await message.answer(
-            "Нужно отправить ровно 7 custom emoji: "
-            "оплата, профиль, серверы, поддержка, назад, "
-            "предупреждение, удаление."
-        )
-        return
-
-    manifest = dict(zip(ORDER, ids, strict=True))
-
-    # Дополнительная проверка: Telegram должен вернуть все семь стикеров.
-    stickers = await message.bot.get_custom_emoji_stickers(
-        custom_emoji_ids=ids,
-    )
-    if len(stickers) != len(ids):
-        await message.answer("Не все custom emoji ID прошли проверку.")
-        return
-
-    await message.answer(
-        "ID проверены:\n"
-        + "\n".join(f"{key}: {value}" for key, value in manifest.items())
-    )
+```yaml
+schema_version: 1
+registry_version: 1.0.0
+entries:
+  payment:
+    fallback: "💳"
+    variants:
+      - custom_emoji_id: "REAL_ID_FROM_GET_STICKER_SET"
+        source_set: approved_pack
+        tags: [payment, card, neutral]
+        capabilities: [inline_button_icon, message_entity]
+  profile: {fallback: "👤", variants: []}
+  servers: {fallback: "🖥️", variants: []}
+  support: {fallback: "🛟", variants: []}
+  back: {fallback: "⬅️", variants: []}
+  warning: {fallback: "⚠️", variants: []}
+  delete: {fallback: "🗑️", variants: []}
 ```
 
-Полученный словарь нужно сохранить в конфигурации проекта. ID не являются секретами.
+Сборка должна отклонять заглушки. Офлайн-проверка валидирует схему, наличие семи slots, положительный `int64`, дубликаты, fallback, допустимые tags/capabilities и детерминированность выбора. После неё live-проверка вызывает `getCustomEmojiStickers` пакетами, сверяет возвращённые ID и выполняет canary-отправку inline-кнопок в тестовый чат и тестовый канал.
 
-Использование в кнопке:
+ИИ не выдаёт сырой ID. Он возвращает, например, `{"slot":"warning","tone":"urgent","surface":"inline_button"}`. Детерминированный селектор оставляет только live-verified варианты с подходящей capability, ранжирует tags и иначе использует Unicode fallback. Для удаления destructive-вариант задаётся политикой, а не настроением модели.
 
-```python
-from aiogram.types import InlineKeyboardButton
-
-button = InlineKeyboardButton(
-    text="Оплатить",
-    callback_data="payment:start",
-    icon_custom_emoji_id=BUTTON_EMOJI["payment"],
-)
-```
-
-Потребуется актуальная версия aiogram, в которой поле `icon_custom_emoji_id` уже описано.
-
-### Как ИИ выбирает эмодзи
-
-Модели нельзя разрешать генерировать Telegram ID напрямую. Она должна возвращать только один ключ из закрытого списка:
-
-```python
-ButtonKind = Literal[
-    "payment",
-    "profile",
-    "servers",
-    "support",
-    "back",
-    "warning",
-    "delete",
-]
-```
-
-Правила выбора:
-
-- покупка, тариф, счёт, продление → `payment`;
-- аккаунт, настройки пользователя → `profile`;
-- хосты, регионы, подключения → `servers`;
-- помощь, оператор, обращение → `support`;
-- переход на предыдущий экран → `back`;
-- риск или важное уведомление → `warning`;
-- необратимое удаление → `delete`.
-
-После ответа модели приложение само подставляет ID из `BUTTON_EMOJI`. Для удаления полезно показывать сначала `delete`, а на экране подтверждения — `warning`. При неизвестном ответе модели используется безопасный вариант без custom emoji.
-
-Premium должен быть активен именно у владельца бота. В канале бот также должен иметь право публиковать сообщения; там следует использовать inline-клавиатуру. Пользователям Premium не требуется, чтобы видеть иконки. Однако буквально «везде» гарантировать custom emoji нельзя: старые клиенты Telegram могут показать только обычный текст кнопки. Поэтому текст `Оплатить`, `Назад`, `Удалить` и т. п. всегда должен оставаться понятным без иконки.
+Premium владельца требуется для `icon_custom_emoji_id`, но не гарантирует любую поверхность. В канале боту нужны права публикации; старые клиенты могут не показать icon. Поэтому текст кнопки и обычный Unicode emoji всегда должны оставаться понятными.

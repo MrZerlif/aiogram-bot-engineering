@@ -5,8 +5,9 @@
 This repository contains two distinct layers:
 
 - `skill/aiogram-bot-engineering/` is the complete installable Codex skill
-  bundle. It contains `SKILL.md`, UI metadata, focused references, and the
-  import-safe example.
+  bundle. It contains `SKILL.md`, UI metadata, focused references, import-safe
+  examples, and the custom-emoji schema, starter registry, and offline
+  validator.
 - The repository root contains maintainer tooling: this README, contract
   scripts, code tests, CI configuration, and behavioral evaluation evidence.
   Those files support development and are not part of the installed skill.
@@ -62,19 +63,32 @@ CI:
 ```shell
 uv sync --locked --group test
 uv run --locked --group test python scripts/lint_skill_contract.py .
+uv run --locked --group test python skill/aiogram-bot-engineering/scripts/validate_custom_emoji_registry.py skill/aiogram-bot-engineering/assets/custom-emoji-registry.example.json
 uv run --locked --group test pytest -q
-uv run --locked --group test mypy scripts skill/aiogram-bot-engineering/examples
+uv run --locked --group test mypy scripts skill/aiogram-bot-engineering/examples skill/aiogram-bot-engineering/scripts
 ```
 
 The example-specific smoke check can also be run directly:
 
 ```shell
 uv run --locked --group test pytest -q tests/code/test_dialog_bot.py
+uv run --locked --group test pytest -q tests/code/test_durable_webhook.py tests/code/test_mini_app_init_data.py
 ```
 
-It imports `skill/aiogram-bot-engineering/examples/dialog-bot.py` by file path
-and constructs its rich message, dialog, router, and dispatcher without reading
-a bot token, creating a `Bot`, polling, or making a network request.
+`test_dialog_bot.py` imports
+`skill/aiogram-bot-engineering/examples/dialog-bot.py` by file path and
+constructs its rich message, dialog, router, and dispatcher without reading a
+bot token, creating a `Bot`, polling, or making a network request. The durable
+webhook tests use a fake inbox, and the Mini App tests execute the canonical
+`validate_init_data` example.
+
+The installable bundle also includes the import-safe
+`examples/durable_webhook.py`. It shows a webhook acceptance boundary backed by
+an application-provided durable inbox; HTTP 200 follows a completed commit.
+The example depends only on Python and aiogram runtime packages and has no
+repository-only imports. Its fake-inbox tests and the canonical Mini App
+`validate_init_data` tests live in the repository test group. The installed
+bundle does not include those test dependencies or maintainer QA scripts.
 
 ## Behavioral evaluation evidence
 
@@ -96,3 +110,7 @@ derived human-readable comparison in
 
 Pytest validates the artifacts' structure and bundle-reference reachability.
 CI does not invoke a model or regenerate the recorded runs.
+Recorded scores apply only to the archived evaluated inputs identified by the
+manifest ZIP and its hashes. The currently corrected bundle has not been
+reevaluated and does not inherit the historical 57/57 score. This plan preserves
+the old outputs and does not regenerate model responses.

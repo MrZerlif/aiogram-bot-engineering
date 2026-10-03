@@ -9,9 +9,11 @@ dependencies = []
 test = [
     "aiogram==3.30.0",
     "aiogram-dialog==2.6.0",
+    "jsonschema[format-nongpl]>=4.23,<5",
     "mypy>=1.19,<2",
     "pytest>=8.3,<10",
     "pytest-asyncio>=0.24,<2",
+    "pyyaml>=6,<7",
 ]
 
 [tool.uv]

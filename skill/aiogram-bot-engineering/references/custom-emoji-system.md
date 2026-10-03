@@ -57,17 +57,21 @@ the project:
 packs:
   - pack_id: brand_ui_adaptive
     telegram_set_name: brand_ui_adaptive_by_example_bot
+    telegram_set_origin: owned
     coherence_group: brand_ui_v1
     status: active
     selection_priority: 100
     trust: owned_reviewed
     source_kind: licensed_source
     source_url: https://github.com/lucide-icons/lucide
+    source_revision: <commit-sha>
     license_spdx: ISC
-    notice_path: licenses/LUCIDE.txt
+    license_url: https://github.com/lucide-icons/lucide/blob/main/LICENSE
+    notice_required: true
     redistribution: allowed_with_notice
     allowed_roles: [action, navigation, status]
     brand_safe: true
+    needs_repainting: true
     style:
       family: outline
       palette: adaptive_monochrome
@@ -81,6 +85,7 @@ emoji:
   - pack_id: brand_ui_adaptive
     token: payment
     aliases: [billing, subscription, renew]
+    source_icon: credit-card
     polarity: neutral
     state: default
     roles: [action]
@@ -107,12 +112,36 @@ or another explicitly reviewed emoji, and pass that value as
 still null, render ordinary text instead of constructing a Rich Text custom
 emoji. Button labels remain the accessible, authoritative description.
 
+Use `telegram_set_origin: owned` only for a set created and controlled through
+the bot; its name must follow `_by_<bot_username>`. Use `public_reference` for
+an external known set name after rights review, and `unpublished_template` with
+a null set name before an owned set exists. Do not infer ownership from a set
+name alone.
+
 For a concrete starting point, copy
 [the disabled Lucide/ISC starter registry](../assets/custom-emoji-registry.example.json).
 It maps common bot UI tokens to one licensed source family without bundling
 SVG artwork or pretending Telegram IDs already exist. Pin `source_revision`,
 retain the ISC notice, create the owned set, then populate and verify IDs in
 the copied project registry; do not enable the bundled template itself.
+
+Validate every edited registry against the bundled
+[Draft 2020-12 JSON Schema](../assets/custom-emoji-registry.schema.json), then
+run the dependency-free
+[offline semantic validator](../scripts/validate_custom_emoji_registry.py):
+
+```shell
+python validate_custom_emoji_registry.py path/to/custom-emoji-registry.json
+```
+
+The schema checks record shape, types, formats, and the fields required by an
+enabled entry. The script checks cross-record invariants that JSON Schema does
+not express cleanly: unique pack identities and Telegram IDs, existing pack
+references, role allowlists, pack-wide repainting, verified enabled records,
+and unambiguous token/role/alias selection. Both checks are offline. A project
+must still perform an explicitly authorized live `getStickerSet` and
+`getCustomEmojiStickers` membership check before enabling production IDs; do
+not put that network mutation or lookup in ordinary bundle validation.
 
 ### Tokens, roles, and collisions
 

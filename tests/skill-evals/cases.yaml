@@ -19,12 +19,12 @@
   },
   {
     "id": "dialog-widget-ui",
-    "prompt": "Create a settings screen with a toggle, pagination, and a confirm action using an aiogram dialog UI.",
+    "prompt": "Create a settings screen with a toggle, pagination, and a confirm action using aiogram-dialog inside an otherwise native aiogram application. After a restart, a stale callback may reference an unknown dialog state; show how centralized recovery returns to a safe settings screen.",
     "topics": ["dialogs", "ui"],
     "expected_references": ["SKILL.md", "references/dialogs-and-ui.md"],
     "retrieval_assertions": ["Routes to the dedicated dialog and widget reference rather than generic inline keyboard advice."],
-    "application_assertions": ["Uses dialog windows and widgets for toggle and pagination state.", "Keeps callback handling inside the dialog interaction model."],
-    "gap_assertions": ["Avoids manually editing one message with ad-hoc callback-data parsing for every widget."]
+    "application_assertions": ["Uses dialog windows and widgets for toggle and pagination state.", "Composes native aiogram routers and services with aiogram-dialog while keeping this flow's state, navigation, and message ownership inside DialogManager.", "Handles UnknownIntent and UnknownState centrally, acknowledges a callback when present, resets the stack, and forces ShowMode.SEND for a fresh recovery message."],
+    "gap_assertions": ["Avoids parallel native FSM or Scene ownership, ad-hoc callback-driven message editing, and automatic editing of the stale recovery target."]
   },
   {
     "id": "native-presentation-anti-slop",
@@ -37,12 +37,12 @@
   },
   {
     "id": "custom-emoji-capability-selection",
-    "prompt": "Собери для aiogram-бота лучший набор Telegram custom emoji для кнопок: оплата, профиль, серверы, поддержка, назад, предупреждение и удаление. Бери популярные публичные наборы, сам выбери ID и объясни, как ИИ будет автоматически выбирать между эмодзи. У владельца бота есть Telegram Premium — значит всё должно работать везде, включая канал.",
+    "prompt": "Собери для aiogram-бота лучший набор Telegram custom emoji для кнопок: оплата, профиль, серверы, поддержка, назад, предупреждение и удаление. Бери популярные публичные наборы, сам выбери ID и объясни, как ИИ будет автоматически выбирать между эмодзи. Предложи версионируемый registry-файл и офлайн-проверку перед live-верификацией ID. У владельца бота есть Telegram Premium — значит всё должно работать везде, включая канал.",
     "topics": ["custom-emoji", "presentation", "ui"],
-    "expected_references": ["SKILL.md", "references/custom-emoji-system.md"],
-    "retrieval_assertions": ["Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance."],
-    "application_assertions": ["Corrects the premise that a bot has Premium and does not treat owner Premium as universal or channel capability.", "Makes the model emit semantic tokens and resolves them pack-first under a coherence lock with deterministic fallbacks ending in no icon.", "Uses only verified registry IDs and requires explicit license and provenance instead of treating a public pack link as permission to redistribute."],
-    "gap_assertions": ["Rejects invented custom emoji IDs, arbitrary cross-pack mixing, unlicensed repacking, and the claim that owner Premium makes button icons work everywhere."]
+    "expected_references": ["SKILL.md", "references/custom-emoji-system.md", "assets/custom-emoji-registry.schema.json", "scripts/validate_custom_emoji_registry.py"],
+    "retrieval_assertions": ["Finds the dedicated custom-emoji capability and selection guidance, then follows its links to the bundled JSON Schema and offline semantic validator."],
+    "application_assertions": ["Corrects the premise that a bot has Premium and does not treat owner Premium as universal or channel capability.", "Makes the model emit semantic tokens and resolves them pack-first under a coherence lock with deterministic fallbacks ending in no icon.", "Uses only verified registry IDs and requires explicit license and provenance instead of treating a public pack link as permission to redistribute.", "Uses the bundled Draft 2020-12 Schema for record shape and the offline validator for cross-record invariants, while keeping authorized live set-membership verification separate."],
+    "gap_assertions": ["Rejects invented custom emoji IDs, arbitrary cross-pack mixing, unlicensed repacking, and the claim that owner Premium makes button icons work everywhere.", "Rejects enabling unresolved, ambiguous, duplicate, repaint-incompatible, or wrong-pack registry records."]
   },
   {
     "id": "mini-app-launch-security",
@@ -73,12 +73,12 @@
   },
   {
     "id": "webhook-secret",
-    "prompt": "Deploy the bot behind HTTPS webhooks and ensure that random internet traffic cannot invoke the update endpoint.",
-    "topics": ["webhook", "security", "deployment"],
+    "prompt": "Deploy the bot behind HTTPS webhooks so random internet traffic cannot invoke the update endpoint, and return success only after a loss-sensitive update has been durably accepted while slow work continues safely. Also show a production polling alternative that cannot create unbounded handler tasks.",
+    "topics": ["webhook", "polling", "security", "deployment"],
     "expected_references": ["SKILL.md", "references/deployment.md", "references/production-engineering.md"],
-    "retrieval_assertions": ["Routes to deployment and webhook operational guidance."],
-    "application_assertions": ["Configures a secret token and verifies the incoming Telegram secret-token header.", "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing."],
-    "gap_assertions": ["Rejects an unauthenticated public POST endpoint and logging the bot token or secret header."]
+    "retrieval_assertions": ["Routes to deployment and production guidance for authenticated durable webhook acknowledgement and bounded polling."],
+    "application_assertions": ["Configures a secret token and verifies the incoming Telegram secret-token header.", "Sets SimpleRequestHandler handle_in_background=False and explains that the approximately 55-second webhook wait still requires a committed inbox, outbox, or durable queue acceptance boundary before acknowledgement.", "Declares an explicit positive polling tasks_concurrency_limit sized to downstream capacity, or deliberately uses sequential handle_as_tasks=False, and treats the limit as per bot."],
+    "gap_assertions": ["Rejects an unauthenticated public POST endpoint, secret logging, default background acknowledgement, default unbounded polling, and treating a concurrency cap as graceful draining or durability."]
   },
   {
     "id": "background-jobs",

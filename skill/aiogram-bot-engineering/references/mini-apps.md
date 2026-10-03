@@ -81,6 +81,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
+import re
 from urllib.parse import parse_qsl
 
 
@@ -98,6 +99,8 @@ def validate_init_data(
     received_hash = values.pop("hash", None)
     if not received_hash:
         raise ValueError("missing hash")
+    if not re.fullmatch(r"[0-9a-f]{64}", received_hash):
+        raise ValueError("invalid hash")
     data_check_string = "\n".join(
         f"{key}={value}" for key, value in sorted(values.items())
     )

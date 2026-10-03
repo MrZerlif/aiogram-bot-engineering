@@ -14,7 +14,10 @@ BUNDLE_RELATIVE = Path("skill/aiogram-bot-engineering")
 REQUIRED_BUNDLE_FILES = {
     Path("SKILL.md"),
     Path("agents/openai.yaml"),
+    Path("assets/custom-emoji-registry.example.json"),
+    Path("assets/custom-emoji-registry.schema.json"),
     Path("examples/dialog-bot.py"),
+    Path("examples/durable_webhook.py"),
     Path("references/architecture.md"),
     Path("references/custom-emoji-system.md"),
     Path("references/deployment.md"),
@@ -25,6 +28,7 @@ REQUIRED_BUNDLE_FILES = {
     Path("references/production-engineering.md"),
     Path("references/rich-messages.md"),
     Path("references/testing.md"),
+    Path("scripts/validate_custom_emoji_registry.py"),
 }
 PROHIBITED_IMPORT_ROOTS = {
     "telebot",
@@ -258,13 +262,156 @@ def _check_local_markdown_links(bundle_root: Path, source: Path, text: str, erro
             errors.append(f"unresolved local link in {source_relative}: {local}")
 
 
-def _dotted_name(node: ast.AST) -> str:
+def _dotted_name(node: ast.AST | None) -> str:
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):
         prefix = _dotted_name(node.value)
         return f"{prefix}.{node.attr}" if prefix else node.attr
     return ""
+
+
+def _keyword_value(call: ast.Call, name: str) -> ast.AST | None:
+    return next(
+        (keyword.value for keyword in call.keywords if keyword.arg == name),
+        None,
+    )
+
+
+def _is_literal_false(node: ast.AST | None) -> bool:
+    return isinstance(node, ast.Constant) and node.value is False
+
+
+def _is_explicit_bounded_limit(node: ast.AST | None) -> bool:
+    if isinstance(node, ast.Constant):
+        return type(node.value) is int and node.value > 0
+    return isinstance(node, (ast.Name, ast.Attribute, ast.Subscript, ast.Call))
+
+
+def _is_show_mode_send(node: ast.AST | None) -> bool:
+    return node is not None and _dotted_name(node) == "ShowMode.SEND"
+
+
+def _check_documented_api_contracts(
+    bundle_root: Path,
+    errors: list[str],
+) -> None:
+    deployment = bundle_root / "references" / "deployment.md"
+    webhook_example_found = False
+    durable_acceptance_example_found = False
+    polling_example_found = False
+    if deployment.is_file():
+        for language, source in _fenced_blocks(_read(deployment, errors))[0]:
+            if language.lower().split(maxsplit=1)[0] not in PYTHON_FENCE_LANGUAGES:
+                continue
+            try:
+                tree = ast.parse(source)
+            except SyntaxError:
+                continue
+            for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+                called = _dotted_name(call.func)
+                call_name = called.rsplit(".", 1)[-1]
+                if call_name == "SimpleRequestHandler":
+                    webhook_example_found = True
+                    if not _is_literal_false(_keyword_value(call, "handle_in_background")):
+                        errors.append(
+                            "webhook example must set handle_in_background=False "
+                            "in references/deployment.md"
+                        )
+                if call_name == "DurableWebhookRequestHandler":
+                    keyword_names = {keyword.arg for keyword in call.keywords}
+                    if {"dispatcher", "bot", "inbox", "secret_token"} <= keyword_names:
+                        durable_acceptance_example_found = True
+                if call_name == "start_polling":
+                    polling_example_found = True
+                    handle_as_tasks = _keyword_value(call, "handle_as_tasks")
+                    concurrency_limit = _keyword_value(call, "tasks_concurrency_limit")
+                    if not _is_literal_false(
+                        handle_as_tasks
+                    ) and not _is_explicit_bounded_limit(concurrency_limit):
+                        errors.append(
+                            "polling example must declare bounded polling concurrency "
+                            "or set handle_as_tasks=False in references/deployment.md"
+                        )
+    if not webhook_example_found:
+        errors.append("missing SimpleRequestHandler example in references/deployment.md")
+    if not durable_acceptance_example_found:
+        errors.append(
+            "missing durable webhook acceptance example in references/deployment.md"
+        )
+    if not polling_example_found:
+        errors.append("missing start_polling example in references/deployment.md")
+
+    dialogs = bundle_root / "references" / "dialogs-and-ui.md"
+    recovery_example_found = False
+    if dialogs.is_file():
+        for language, source in _fenced_blocks(_read(dialogs, errors))[0]:
+            if language.lower().split(maxsplit=1)[0] not in PYTHON_FENCE_LANGUAGES:
+                continue
+            try:
+                tree = ast.parse(source)
+            except SyntaxError:
+                continue
+            exception_recovery_context = (
+                "UnknownIntent" in source or "UnknownState" in source
+            )
+            recovery_functions = (
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            )
+            for function in recovery_functions:
+                function_name = function.name.casefold()
+                recovery_named = (
+                    "recover" in function_name or "stale" in function_name
+                )
+                if not recovery_named and not exception_recovery_context:
+                    continue
+                parameters = {
+                    argument.arg
+                    for argument in (
+                        *function.args.posonlyargs,
+                        *function.args.args,
+                        *function.args.kwonlyargs,
+                    )
+                }
+                annotated_managers = {
+                    argument.arg
+                    for argument in (
+                        *function.args.posonlyargs,
+                        *function.args.args,
+                        *function.args.kwonlyargs,
+                    )
+                    if argument.annotation is not None
+                    and _dotted_name(argument.annotation).rsplit(".", 1)[-1]
+                    == "DialogManager"
+                }
+                for call in (
+                    node for node in ast.walk(function) if isinstance(node, ast.Call)
+                ):
+                    called = _dotted_name(call.func)
+                    if called.rsplit(".", 1)[-1] != "start":
+                        continue
+                    receiver = called.rsplit(".", 1)[0].rsplit(".", 1)[-1]
+                    reset_stack = (
+                        _dotted_name(_keyword_value(call, "mode"))
+                        == "StartMode.RESET_STACK"
+                    )
+                    receiver_is_manager = (
+                        receiver == "dialog_manager"
+                        or receiver in annotated_managers
+                        or (reset_stack and receiver in parameters)
+                    )
+                    if not receiver_is_manager:
+                        continue
+                    recovery_example_found = True
+                    if not _is_show_mode_send(_keyword_value(call, "show_mode")):
+                        errors.append(
+                            "stale-dialog recovery must set show_mode=ShowMode.SEND "
+                            "in references/dialogs-and-ui.md"
+                        )
+    if not recovery_example_found:
+        errors.append("missing stale-dialog recovery example in references/dialogs-and-ui.md")
 
 
 def _python_findings(tree: ast.AST) -> set[str]:
@@ -362,6 +509,7 @@ def lint_skill_bundle(bundle_root: Path) -> list[str]:
             python_file.relative_to(bundle_root),
             errors,
         )
+    _check_documented_api_contracts(bundle_root, errors)
     return errors
 
 

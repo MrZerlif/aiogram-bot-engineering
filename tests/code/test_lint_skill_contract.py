@@ -30,6 +30,11 @@ REQUIRED_REFERENCE_NAMES = (
     "rich-messages.md",
     "testing.md",
 )
+REQUIRED_BUNDLE_RESOURCES = (
+    "assets/custom-emoji-registry.example.json",
+    "assets/custom-emoji-registry.schema.json",
+    "scripts/validate_custom_emoji_registry.py",
+)
 
 
 def make_valid_repository(tmp_path: Path) -> Path:
@@ -38,10 +43,53 @@ def make_valid_repository(tmp_path: Path) -> Path:
     (bundle / "agents").mkdir(parents=True)
     (bundle / "references").mkdir()
     (bundle / "examples").mkdir()
+    (bundle / "assets").mkdir()
+    (bundle / "scripts").mkdir()
     (bundle / "agents" / "openai.yaml").write_text("interface: {}\n", encoding="utf-8")
     for name in REQUIRED_REFERENCE_NAMES:
         (bundle / "references" / name).write_text(f"# {name}\n", encoding="utf-8")
+    (bundle / "references" / "deployment.md").write_text(
+        "# deployment.md\n\n"
+        "```python\n"
+        "SimpleRequestHandler(\n"
+        "    dispatcher=dispatcher, bot=bot, handle_in_background=False\n"
+        ")\n"
+        "DurableWebhookRequestHandler(\n"
+        "    dispatcher=dispatcher, bot=bot, inbox=inbox, secret_token=secret_token\n"
+        ")\n"
+        "await dispatcher.start_polling(\n"
+        "    bot, tasks_concurrency_limit=max_concurrent_updates\n"
+        ")\n"
+        "```\n",
+        encoding="utf-8",
+    )
+    (bundle / "references" / "dialogs-and-ui.md").write_text(
+        "# dialogs-and-ui.md\n\n"
+        "```python\n"
+        "async def recover_dialog(dialog_manager):\n"
+        "    await dialog_manager.start(\n"
+        "        CatalogSG.browse, show_mode=ShowMode.SEND\n"
+        "    )\n"
+        "```\n",
+        encoding="utf-8",
+    )
     (bundle / "examples" / "dialog-bot.py").write_text("print('ok')\n", encoding="utf-8")
+    (bundle / "examples" / "durable_webhook.py").write_text(
+        "class DurableWebhookRequestHandler:\n    pass\n",
+        encoding="utf-8",
+    )
+    (bundle / "assets" / "custom-emoji-registry.example.json").write_text(
+        "{}\n",
+        encoding="utf-8",
+    )
+    (bundle / "assets" / "custom-emoji-registry.schema.json").write_text(
+        "{}\n",
+        encoding="utf-8",
+    )
+    (bundle / "scripts" / "validate_custom_emoji_registry.py").write_text(
+        "def validate_registry(document):\n    return []\n",
+        encoding="utf-8",
+    )
     reference_routes = "\n".join(
         f"[{name}](references/{name})" for name in REQUIRED_REFERENCE_NAMES
     )
@@ -53,6 +101,7 @@ description: Test fixture
 
 {reference_routes}
 [full example](examples/dialog-bot.py)
+[durable webhook acceptance](examples/durable_webhook.py)
 """,
         encoding="utf-8",
     )
@@ -66,6 +115,14 @@ def bundle_path(repo: Path) -> Path:
 def append_skill(repo: Path, text: str) -> None:
     skill = bundle_path(repo) / "SKILL.md"
     skill.write_text(skill.read_text(encoding="utf-8") + "\n" + text + "\n", encoding="utf-8")
+
+
+def append_reference(repo: Path, name: str, text: str) -> None:
+    reference = bundle_path(repo) / "references" / name
+    reference.write_text(
+        reference.read_text(encoding="utf-8") + "\n" + text + "\n",
+        encoding="utf-8",
+    )
 
 
 def add_reference(repo: Path, name: str, *, routed: bool) -> None:
@@ -133,6 +190,7 @@ def test_rejects_missing_required_bundle_files(tmp_path: Path) -> None:
     [
         *(f"references/{name}" for name in REQUIRED_REFERENCE_NAMES),
         "examples/dialog-bot.py",
+        *REQUIRED_BUNDLE_RESOURCES,
     ],
 )
 def test_rejects_removing_a_required_routed_resource(
@@ -202,6 +260,188 @@ def test_rejects_prohibited_telegram_framework_and_raw_bot_api_http(tmp_path: Pa
 
     assert any("prohibited executable framework" in error for error in errors)
     assert any("prohibited executable raw Bot API HTTP" in error for error in errors)
+
+
+def test_rejects_webhook_example_that_acknowledges_in_background(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "deployment.md",
+        "```python\nSimpleRequestHandler(dispatcher=dispatcher, bot=bot)\n```",
+    )
+
+    assert any("handle_in_background=False" in error for error in lint_repository(repo))
+
+
+def test_accepts_webhook_example_that_awaits_dispatch(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "deployment.md",
+        "```python\nSimpleRequestHandler(\n"
+        "    dispatcher=dispatcher, bot=bot, handle_in_background=False\n"
+        ")\n```",
+    )
+
+    assert lint_repository(repo) == []
+
+
+def test_rejects_simple_handler_as_only_durable_webhook_example(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    deployment = bundle_path(repo) / "references" / "deployment.md"
+    content = deployment.read_text(encoding="utf-8")
+    durable_call = (
+        "DurableWebhookRequestHandler(\n"
+        "    dispatcher=dispatcher, bot=bot, inbox=inbox, secret_token=secret_token\n"
+        ")\n"
+    )
+    assert durable_call in content
+    deployment.write_text(content.replace(durable_call, ""), encoding="utf-8")
+
+    errors = lint_repository(repo)
+
+    assert any(
+        "missing durable webhook acceptance example in references/deployment.md" in error
+        for error in errors
+    )
+
+
+@pytest.mark.parametrize(
+    "polling_call",
+    [
+        "await dispatcher.start_polling(bot)",
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit=None)",
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit=0)",
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit='64')",
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit=1.5)",
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit=-max_updates)",
+    ],
+)
+def test_rejects_unbounded_or_nonpositive_polling_policy(
+    tmp_path: Path,
+    polling_call: str,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(repo, "deployment.md", f"```python\n{polling_call}\n```")
+
+    assert any("bounded polling concurrency" in error for error in lint_repository(repo))
+
+
+@pytest.mark.parametrize(
+    "polling_call",
+    [
+        "await dispatcher.start_polling(bot, tasks_concurrency_limit=max_updates)",
+        "await dispatcher.start_polling(bot, handle_as_tasks=False)",
+    ],
+)
+def test_accepts_explicit_bounded_or_sequential_polling_policy(
+    tmp_path: Path,
+    polling_call: str,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(repo, "deployment.md", f"```python\n{polling_call}\n```")
+
+    assert lint_repository(repo) == []
+
+
+def test_rejects_stale_dialog_recovery_that_edits_the_stale_message(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "dialogs-and-ui.md",
+        "```python\n"
+        "async def recover_dialog(dialog_manager):\n"
+        "    await dialog_manager.start(CatalogSG.browse, mode=StartMode.RESET_STACK)\n"
+        "```",
+    )
+
+    assert any("show_mode=ShowMode.SEND" in error for error in lint_repository(repo))
+
+
+def test_accepts_stale_dialog_recovery_that_sends_a_fresh_message(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "dialogs-and-ui.md",
+        "```python\n"
+        "async def recover_dialog(dialog_manager):\n"
+        "    await dialog_manager.start(\n"
+        "        CatalogSG.browse,\n"
+        "        mode=StartMode.RESET_STACK,\n"
+        "        show_mode=ShowMode.SEND,\n"
+        "    )\n"
+        "```",
+    )
+
+    assert lint_repository(repo) == []
+
+
+def test_does_not_treat_an_unrelated_recovery_service_as_dialog_navigation(
+    tmp_path: Path,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "dialogs-and-ui.md",
+        "```python\n"
+        "async def recover_connection(service):\n"
+        "    await service.start()\n"
+        "```",
+    )
+
+    assert lint_repository(repo) == []
+
+
+def test_rejects_removing_required_delivery_and_recovery_examples(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    for name in ("deployment.md", "dialogs-and-ui.md"):
+        reference = bundle_path(repo) / "references" / name
+        reference.write_text(f"# {name}\n", encoding="utf-8")
+
+    errors = lint_repository(repo)
+
+    assert any("missing SimpleRequestHandler example" in error for error in errors)
+    assert any(
+        "missing durable webhook acceptance example in references/deployment.md" in error
+        for error in errors
+    )
+    assert any("missing start_polling example" in error for error in errors)
+    assert any("missing stale-dialog recovery example" in error for error in errors)
+
+
+def test_rejects_stale_recovery_with_neutral_function_and_manager_names(
+    tmp_path: Path,
+) -> None:
+    repo = make_valid_repository(tmp_path)
+    reference = bundle_path(repo) / "references" / "dialogs-and-ui.md"
+    reference.write_text(
+        "# dialogs-and-ui.md\n\n"
+        "```python\n"
+        "from aiogram_dialog import DialogManager, StartMode\n"
+        "from aiogram_dialog.api.exceptions import UnknownIntent\n"
+        "async def handle_stale(manager: DialogManager):\n"
+        "    await manager.start(\n"
+        "        CatalogSG.browse, mode=StartMode.RESET_STACK\n"
+        "    )\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    assert any("show_mode=ShowMode.SEND" in error for error in lint_repository(repo))
+
+
+def test_does_not_treat_dialog_metrics_start_as_navigation(tmp_path: Path) -> None:
+    repo = make_valid_repository(tmp_path)
+    append_reference(
+        repo,
+        "dialogs-and-ui.md",
+        "```python\n"
+        "async def recover_metrics(dialog_metrics):\n"
+        "    await dialog_metrics.start()\n"
+        "```",
+    )
+
+    assert lint_repository(repo) == []
 
 
 def test_rejects_an_unrouted_bundle_example(tmp_path: Path) -> None:

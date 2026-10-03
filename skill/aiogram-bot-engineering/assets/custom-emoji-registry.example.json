@@ -1,10 +1,12 @@
 {
+  "$schema": "./custom-emoji-registry.schema.json",
   "schema_version": 1,
   "catalog_kind": "disabled_starter_template",
   "packs": [
     {
       "pack_id": "lucide_ui_adaptive",
       "telegram_set_name": null,
+      "telegram_set_origin": "unpublished_template",
       "coherence_group": "lucide_ui_v1",
       "status": "template",
       "selection_priority": 100,

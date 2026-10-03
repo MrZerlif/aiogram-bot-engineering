@@ -121,7 +121,7 @@ trying to repair arbitrary callback state.
 
 ```python
 from aiogram.filters import ExceptionTypeFilter
-from aiogram_dialog import DialogManager, StartMode
+from aiogram_dialog import DialogManager, ShowMode, StartMode
 from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
 
 
@@ -130,12 +130,20 @@ async def recover_dialog(event, dialog_manager: DialogManager) -> None:
     callback = getattr(event.update, "callback_query", None)
     if callback:
         await callback.answer()
-    await dialog_manager.start(CatalogSG.browse, mode=StartMode.RESET_STACK)
+    await dialog_manager.start(
+        CatalogSG.browse,
+        mode=StartMode.RESET_STACK,
+        show_mode=ShowMode.SEND,
+    )
 
 
 dp.errors.register(recover_dialog, ExceptionTypeFilter(UnknownIntent))
 dp.errors.register(recover_dialog, ExceptionTypeFilter(UnknownState))
 ```
+
+`ShowMode.SEND` deliberately creates a fresh safe screen. Automatic edit mode
+can target the stale or unavailable message that caused recovery, recreating
+the same failure.
 
 ## Styled buttons and custom emoji
 

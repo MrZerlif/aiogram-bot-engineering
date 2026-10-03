@@ -12,16 +12,33 @@ and use `allowed_updates` based on the update types the dispatcher actually
 handles. Before enabling polling, remove any configured webhook for that bot.
 
 ```python
-await bot.delete_webhook(drop_pending_updates=False)
-await dispatcher.start_polling(
-    bot,
-    allowed_updates=dispatcher.resolve_used_update_types(),
-)
+from aiogram import Bot, Dispatcher
+
+
+async def run_polling(
+    bot: Bot,
+    dispatcher: Dispatcher,
+    *,
+    max_concurrent_updates: int,
+) -> None:
+    if max_concurrent_updates <= 0:
+        raise ValueError("max_concurrent_updates must be positive")
+    await bot.delete_webhook(drop_pending_updates=False)
+    await dispatcher.start_polling(
+        bot,
+        allowed_updates=dispatcher.resolve_used_update_types(),
+        handle_as_tasks=True,
+        tasks_concurrency_limit=max_concurrent_updates,
+    )
 ```
 
-Arrange shutdown so the polling task can finish, then close resources such as
-database pools and the bot session. This is a clean, graceful shutdown rather
-than relying on process termination to release resources.
+Size the positive limit to the database pool, queue, outbound limits, and
+handler cost. With `handle_as_tasks=True`, `tasks_concurrency_limit` is per bot;
+multiple bots multiply the possible work. A deliberately sequential deployment
+may instead set `handle_as_tasks=False`. A concurrency cap prevents task growth
+but does not itself drain update tasks. Own the shutdown policy: stop intake,
+track and drain bounded in-flight work or make cancellation safe, then close
+database pools and bot sessions.
 
 ## Webhook
 
@@ -48,6 +65,7 @@ from urllib.parse import urlsplit
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from durable_webhook import DurableInbox, DurableWebhookRequestHandler
 
 WEBHOOK_PATH = "/telegram/webhook"
 
@@ -74,11 +92,16 @@ WEBHOOK_URL = load_webhook_url()
 SECRET_TOKEN = load_webhook_secret()
 
 
-async def start_webhook(bot: Bot, dispatcher: Dispatcher) -> web.Application:
+async def start_webhook(
+    bot: Bot,
+    dispatcher: Dispatcher,
+    inbox: DurableInbox,
+) -> web.Application:
     app = web.Application()
-    handler = SimpleRequestHandler(
+    handler = DurableWebhookRequestHandler(
         dispatcher=dispatcher,
         bot=bot,
+        inbox=inbox,
         secret_token=SECRET_TOKEN,
     )
     handler.register(app, path=WEBHOOK_PATH)
@@ -96,6 +119,44 @@ async def start_webhook(bot: Bot, dispatcher: Dispatcher) -> web.Application:
 to aiohttp so startup and shutdown are coordinated. Configure the web server to
 stop accepting new work, allow in-flight work to finish, and close application
 resources for a graceful shutdown.
+
+When using the ordinary handler directly, disable its immediate background
+acknowledgement:
+
+```python
+SimpleRequestHandler(
+    dispatcher=dispatcher,
+    bot=bot,
+    handle_in_background=False,
+    secret_token=SECRET_TOKEN,
+)
+```
+
+This setting only makes aiohttp await `feed_webhook_update`. Aiogram's webhook
+dispatcher waits about 55 seconds and then may return while unfinished work
+continues in memory. The flag alone does not create durable acceptance.
+
+The copied `examples/durable_webhook.py` module must be importable as
+`durable_webhook`. Its `DurableWebhookRequestHandler` inherits the
+`SimpleRequestHandler` secret-header verifier, request routing, and shutdown
+hook, while overriding the aiogram 3.30.0 private `_handle_request` extension
+point to validate the update and await `inbox.accept`. The project supplies the
+durable inbox adapter and a worker; this example does not contain a fake or
+in-memory production adapter.
+
+The adapter must commit atomically under the unique `(bot_id, update_id)` key
+and return only after that record is committed or a committed duplicate is
+confirmed. A worker reads committed rows, calls
+`dispatcher.feed_raw_update(bot, update=payload)`, marks each row processed
+after success, and retries processing failures under the application's durable
+retry policy. Do not dispatch business work in the HTTP handler.
+
+The handler returns `200` only after inbox acceptance. A timeout or storage
+failure returns `503`; cancellation propagates so Telegram can retry. A timeout
+can have an ambiguous commit outcome, so a redelivery must use the same key and
+the adapter must make that retry idempotent. Worker retries and idempotency for
+external effects are still required; this example does not provide exactly-once
+business effects.
 
 Reject a missing or invalid secret header before parsing or dispatching the
 update, and never return a successful acknowledgement for a rejected request.

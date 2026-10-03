@@ -91,6 +91,14 @@ handler and assert rejection before dispatcher invocation. Separately feed a
 valid update through the normal path; do not test secret comparison by calling
 an unrelated helper in isolation.
 
+For durable webhook acceptance, block the fake inbox commit with an event and
+assert the request has not completed and no record exists yet. Release the
+commit and assert `200` follows the persisted `(bot_id, update_id)` record.
+Make the adapter raise and separately exceed the acceptance timeout; both
+cases must return a non-2xx response and leave the update unacknowledged for a
+safe retry. Also assert the HTTP handler never dispatches the update and that
+logs omit the secret header, bot token, and raw payload.
+
 ## Payments and test discipline
 
 Feed the same successful-payment update twice and assert fulfillment happens

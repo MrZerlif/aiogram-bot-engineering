@@ -74,7 +74,9 @@ connections. Liveness means the process can make progress; readiness becomes
 true only after required dependencies are usable, not merely after the port is
 open. See [deployment](deployment.md) for polling and webhook wiring.
 
-CI should gate each change with the skill contract linter, focused and full
-tests, type checking, and executable examples. Keep production credentials out
-of CI logs and run any integration environment with isolated, disposable
-resources.
+CI should gate each change with focused and full tests, type checking,
+migration checks where relevant, executable examples, and project-owned data
+validators. Keep production credentials out of CI logs and run any integration
+environment with isolated, disposable resources. Repository-specific contract
+tooling belongs to the repository that provides it; do not assume an installed
+skill bundle supplies the maintainer's linter.

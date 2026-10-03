@@ -5,8 +5,10 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path, PurePath, PureWindowsPath
+import warnings
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 from typing import TypeVar
+import zipfile
 
 import pytest
 
@@ -107,6 +109,87 @@ def bundle_sha256() -> str:
     return digest.hexdigest()
 
 
+def archived_bundle_sha256(archive_path: Path) -> str:
+    """Hash ZIP members with the repository's historical bundle algorithm."""
+    digest = hashlib.sha256()
+    with zipfile.ZipFile(archive_path) as archive:
+        entries = archive.infolist()
+        names = [entry.filename for entry in entries]
+        if len(names) != len(set(names)):
+            raise ValueError("duplicate archive entry")
+
+        files = [entry for entry in entries if not entry.is_dir()]
+        for entry in files:
+            name = entry.filename
+            posix_path = PurePosixPath(name)
+            windows_path = PureWindowsPath(name)
+            if (
+                not name
+                or "\\" in name
+                or posix_path.is_absolute()
+                or windows_path.is_absolute()
+                or bool(windows_path.drive)
+                or any(part in {".", ".."} for part in posix_path.parts)
+                or posix_path.as_posix() != name
+            ):
+                raise ValueError(f"unsafe archive entry path: {name}")
+
+        for entry in sorted(files, key=lambda item: PurePosixPath(item.filename).as_posix()):
+            name = entry.filename
+            digest.update(name.encode("utf-8") + b"\0" + archive.read(entry) + b"\0")
+    return digest.hexdigest()
+
+
+def test_archived_bundle_hash_matches_recorded_snapshot() -> None:
+    manifest = load_json_object(RUN_MANIFEST_PATH)
+    archive_info = manifest["skill_snapshot"]["archive"]
+    archive_path = REPOSITORY_ROOT / archive_info["path"]
+
+    assert sha256_file(archive_path) == archive_info["sha256"]
+    assert archived_bundle_sha256(archive_path) == manifest["skill_snapshot"]["bundle_sha256"]
+
+
+def _write_test_archive(path: Path, entries: list[tuple[str, bytes]]) -> None:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, content in entries:
+                archive.writestr(name, content)
+
+
+def test_archived_bundle_hash_detects_changed_content(tmp_path: Path) -> None:
+    entries = [("zeta.txt", b"zeta bytes"), ("alpha/file.txt", b"original bytes")]
+    original = tmp_path / "original.zip"
+    reordered = tmp_path / "reordered.zip"
+    changed = tmp_path / "changed.zip"
+    _write_test_archive(original, entries)
+    _write_test_archive(reordered, list(reversed(entries)))
+    _write_test_archive(changed, [("zeta.txt", b"zeta bytes"), ("alpha/file.txt", b"changed bytes")])
+
+    assert archived_bundle_sha256(original) == archived_bundle_sha256(reordered)
+    assert archived_bundle_sha256(original) != archived_bundle_sha256(changed)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["../outside.txt", "/absolute.txt", "C:/absolute.txt", r"folder\\backslash.txt"],
+)
+def test_archived_bundle_hash_rejects_unsafe_entry_paths(tmp_path: Path, name: str) -> None:
+    archive_path = tmp_path / "unsafe.zip"
+    _write_test_archive(archive_path, [(name, b"bytes")])
+
+    with pytest.raises(ValueError, match="unsafe archive entry path"):
+        archived_bundle_sha256(archive_path)
+
+
+def test_archived_bundle_hash_rejects_duplicate_entry_names(tmp_path: Path) -> None:
+    archive_path = tmp_path / "duplicate.zip"
+    _write_test_archive(archive_path, [("same.txt", b"first"), ("same.txt", b"second")])
+
+    with pytest.raises(ValueError, match="duplicate archive entry"):
+        archived_bundle_sha256(archive_path)
+
+
 def test_bundle_paths_use_platform_neutral_posix_order() -> None:
     bundle = PureWindowsPath("C:/bundle")
     paths = [bundle / "agents" / "openai.yaml", bundle / "SKILL.md"]
@@ -180,7 +263,14 @@ def test_run_manifest_binds_inputs_outputs_and_runner_conditions() -> None:
     manifest = load_json_object(RUN_MANIFEST_PATH)
     assert manifest["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{40}", manifest["skill_snapshot"]["commit"])
-    assert manifest["skill_snapshot"]["bundle_sha256"] == bundle_sha256()
+    archive_info = manifest["skill_snapshot"]["archive"]
+    archive_path = REPOSITORY_ROOT / archive_info["path"]
+    assert archive_info["path"] == (
+        "tests/skill-evals/snapshots/"
+        "03b1002d0efd7c878fd189ff74bc101db078ff62848473d56cde91f23bde4ba2.zip"
+    )
+    assert sha256_file(archive_path) == archive_info["sha256"]
+    assert archived_bundle_sha256(archive_path) == manifest["skill_snapshot"]["bundle_sha256"]
 
     artifact_paths = {
         "cases": CASES_PATH,

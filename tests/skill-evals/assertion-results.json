@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "run_id": "evaluator-20260820-composite-r7",
+  "run_id": "evaluator-20260820-composite-r8",
   "runner": {
-    "canonical_task": "composite: /root/eval_assertion_judge + /root/final_eval_visual_r2",
+    "canonical_task": "composite: /root/eval_assertion_judge + /root/final_eval_visual_r2 + /root/eval_delivery_registry_assertions",
     "system": "Codex collaboration subagent",
     "model_family": "GPT-5/Codex",
     "exact_model_revision": null,
     "revision_disclosure": "Exact deployed model revision is not exposed to the runner."
   },
-  "method": "Each condition is scored at assertion level. Retrieval passes only when every expected reference appears in that condition's case-specific retrieval-trace case_paths; output prose is not used to infer retrieval. Application and gap assertions pass only when the corresponding case output contains explicit support, recorded as one exact contiguous excerpt. The original ten treatment cases use one shared-batch runner self-report. The final presentation and custom-emoji cases use isolated-runner self-reports against frozen bundle SHA-256 cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150; no read claim is platform-signed.",
+  "method": "Each condition is scored at assertion level. Retrieval passes only when every expected reference appears in that condition's case-specific retrieval-trace case_paths; output prose is not used to infer retrieval. Application and gap assertions pass only when the corresponding case output contains explicit support, recorded as one exact contiguous excerpt. Eight unaffected engineering cases retain their historical evaluations, native-presentation-anti-slop retains its prior isolated evaluation, and dialog-widget-ui, custom-emoji-capability-selection, and webhook-secret were freshly evaluated from one shared batch against frozen bundle SHA-256 03b1002d0efd7c878fd189ff74bc101db078ff62848473d56cde91f23bde4ba2. Retrieval paths are originating-runner self-reports and are not platform-signed.",
   "cases": [
     {
       "id": "fsm-linear-flow",
@@ -213,7 +213,7 @@
               "evidence": {
                 "kind": "retrieval_trace",
                 "paths": [],
-                "reason": "The control ordered_paths is empty, so neither expected reference is present."
+                "reason": "The condition case_paths is empty; SKILL.md and references/dialogs-and-ui.md are both missing."
               }
             }
           ],
@@ -223,25 +223,33 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Build one `Dialog` window whose getter returns persisted settings plus the current page. Use a `Checkbox` for the boolean setting, a paginated `ScrollingGroup` or paged `Select` for the list, navigation controls, and a `Button` for confirmation."
+                "excerpt": "settings_dialog = Dialog(\n    Window(\n        Const(\"Settings\"),\n        Checkbox(\n            Const(\"🔔 Notifications: on\"),\n            Const(\"🔕 Notifications: off\"),\n            id=\"notifications\",\n            on_state_changed=lambda e, w, m:\n                m.dialog_data.__setitem__(\"notifications\", w.is_checked()),\n        ),\n        ScrollingGroup(\n            Select(\n                Format(\"{item[title]}\"),\n                id=\"server\",\n                item_id_getter=lambda item: item[\"id\"],\n                items=\"servers\",\n                on_click=select_server,\n            ),\n            id=\"pages\",\n            width=1,\n            height=3,\n        ),\n        Group(\n            PrevPage(scroll=\"pages\", text=Const(\"◀\")),\n            CurrentPage(scroll=\"pages\", text=Format(\"{current_page1}/{pages}\")),\n            NextPage(scroll=\"pages\", text=Const(\"▶\")),\n            width=3,\n        ),\n        Button(Const(\"✅ Confirm\"), id=\"confirm\", on_click=confirm),\n        getter=getter,\n        state=SettingsSG.main,\n    )\n)"
               }
             },
             {
-              "assertion": "Keeps callback handling inside the dialog interaction model.",
-              "passed": true,
+              "assertion": "Composes native aiogram routers and services with aiogram-dialog while keeping this flow's state, navigation, and message ownership inside DialogManager.",
+              "passed": false,
               "evidence": {
-                "kind": "output_excerpt",
-                "excerpt": "The checkbox callback updates only dialog-local draft data and re-renders; page navigation changes the dialog page without mutating the saved settings."
+                "kind": "missing_output_evidence",
+                "reason": "The response uses a native command and dialog_data, but it does not explicitly establish that state, navigation, and message ownership are exclusively kept inside DialogManager."
+              }
+            },
+            {
+              "assertion": "Handles UnknownIntent and UnknownState centrally, acknowledges a callback when present, resets the stack, and forces ShowMode.SEND for a fresh recovery message.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The recovery registers UnknownIntent and resets the stack, but it does not explicitly register UnknownState or force ShowMode.SEND."
               }
             }
           ],
           "gap": [
             {
-              "assertion": "Avoids manually editing one message with ad-hoc callback-data parsing for every widget.",
-              "passed": true,
+              "assertion": "Avoids parallel native FSM or Scene ownership, ad-hoc callback-driven message editing, and automatic editing of the stale recovery target.",
+              "passed": false,
               "evidence": {
-                "kind": "output_excerpt",
-                "excerpt": "Build one `Dialog` window whose getter returns persisted settings plus the current page. Use a `Checkbox` for the boolean setting, a paginated `ScrollingGroup` or paged `Select` for the list, navigation controls, and a `Button` for confirmation. Give every widget a stable, unique ID. The checkbox callback updates only dialog-local draft data and re-renders; page navigation changes the dialog page without mutating the saved settings."
+                "kind": "missing_output_evidence",
+                "reason": "The response does not explicitly exclude parallel FSM or Scene ownership and does not use ShowMode.SEND to prevent editing the stale recovery target."
               }
             }
           ]
@@ -255,15 +263,18 @@
                 "kind": "retrieval_trace",
                 "paths": [
                   "SKILL.md",
-                  "references/architecture.md",
                   "references/dialogs-and-ui.md",
-                  "references/mini-apps.md",
-                  "references/payments.md",
+                  "references/presentation-and-ux.md",
+                  "references/custom-emoji-system.md",
+                  "assets/custom-emoji-registry.example.json",
+                  "assets/custom-emoji-registry.schema.json",
+                  "scripts/validate_custom_emoji_registry.py",
                   "references/deployment.md",
-                  "references/testing.md",
-                  "references/production-engineering.md"
+                  "references/production-engineering.md",
+                  "references/architecture.md",
+                  "examples/dialog-bot.py"
                 ],
-                "reason": "The shared treatment ordered_paths contains both expected references: SKILL.md and references/dialogs-and-ui.md."
+                "reason": "Every expected_reference is present in the condition case_paths."
               }
             }
           ],
@@ -273,25 +284,33 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Define a `SettingsSG` state and a `Dialog` containing a `Window` with a `Checkbox` or toggle control, a bounded `ScrollingGroup`/pager for the settings list, and a confirm `Button`."
+                "excerpt": "settings_dialog = Dialog(\n    Window(\n        Format(\n            \"Settings\\n\\nNotifications: {alerts_label}\\n\"\n            \"Selected server: {selected_name}\"\n        ),\n        Button(\n            Format(\"Notifications: {alerts_label}\"),\n            id=\"toggle_alerts\",\n            on_click=toggle_alerts,\n        ),\n        Column(\n            Select(\n                Format(\"{item[name]}\"),\n                id=\"server\",\n                item_id_getter=lambda item: item[\"id\"],\n                items=\"items\",\n                on_click=select_server,\n            )\n        ),\n        Row(\n            Button(Const(\"Previous\"), id=\"prev\", on_click=previous_page,\n                   when=\"has_previous\"),\n            Button(Const(\"Next\"), id=\"next\", on_click=next_page,\n                   when=\"has_next\"),\n        ),\n        Format(\"Page {page_label}\"),\n        SwitchTo(Const(\"Review changes\"), id=\"review\", state=SettingsSG.confirm),\n        getter=settings_getter,\n        state=SettingsSG.edit,\n    ),"
               }
             },
             {
-              "assertion": "Keeps callback handling inside the dialog interaction model.",
+              "assertion": "Composes native aiogram routers and services with aiogram-dialog while keeping this flow's state, navigation, and message ownership inside DialogManager.",
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Toggle callbacks may update `dialog_data` as a draft, but they must not trust a setting name or value supplied by callback data. Confirm should reload the allowed settings server-side, authorize the actor, validate the draft, and persist all changes atomically through a service. Only then should it call `done()` or render success."
+                "excerpt": "Use native routers for ordinary commands and let `aiogram-dialog` exclusively own the settings flow and its stack.\n\n```python\nimport logging\nfrom aiogram import Dispatcher, Router\nfrom aiogram.enums import ButtonStyle\nfrom aiogram.filters import Command, ExceptionTypeFilter\nfrom aiogram.fsm.state import State, StatesGroup\nfrom aiogram.fsm.storage.base import BaseStorage\nfrom aiogram.types import CallbackQuery, Message\nfrom aiogram_dialog import (\n    Dialog, DialogManager, ShowMode, StartMode, Window, setup_dialogs,\n)\nfrom aiogram_dialog.api.exceptions import UnknownIntent, UnknownState\nfrom aiogram_dialog.widgets.kbd import Button, Column, Row, Select, SwitchTo\nfrom aiogram_dialog.widgets.style import Style\nfrom aiogram_dialog.widgets.text import Const, Format\n\nlog = logging.getLogger(__name__)\nPAGE_SIZE = 5\nnative_router = Router(name=\"native\")\n\n\nclass SettingsSG(StatesGroup):\n    edit = State()\n    confirm = State()\n\n\nasync def load_draft(_start_data, manager: DialogManager):\n    repo = manager.middleware_data[\"settings_repo\"]\n    current = await repo.get(manager.event.from_user.id)\n    manager.dialog_data.update(\n        alerts=current.alerts,\n        server_id=str(current.server_id),\n        version=current.version,\n        page=0,\n    )"
+              }
+            },
+            {
+              "assertion": "Handles UnknownIntent and UnknownState centrally, acknowledges a callback when present, resets the stack, and forces ShowMode.SEND for a fresh recovery message.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "async def recover_stale_dialog(event, dialog_manager: DialogManager):\n    log.exception(\"Stale dialog callback\", exc_info=event.exception)\n    callback = getattr(event.update, \"callback_query\", None)\n    if callback:\n        await callback.answer()\n    await dialog_manager.start(\n        SettingsSG.edit,\n        mode=StartMode.RESET_STACK,\n        show_mode=ShowMode.SEND,\n    )\n\n\ndef build_dispatcher(\n    storage: BaseStorage, settings_repo, server_catalog\n) -> Dispatcher:\n    dp = Dispatcher(\n        storage=storage,\n        settings_repo=settings_repo,\n        server_catalog=server_catalog,\n    )\n    dp.include_router(native_router)\n    dp.include_router(settings_dialog)\n    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownIntent))\n    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownState))\n    setup_dialogs(dp)\n    return dp"
               }
             }
           ],
           "gap": [
             {
-              "assertion": "Avoids manually editing one message with ad-hoc callback-data parsing for every widget.",
+              "assertion": "Avoids parallel native FSM or Scene ownership, ad-hoc callback-driven message editing, and automatic editing of the stale recovery target.",
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Define a `SettingsSG` state and a `Dialog` containing a `Window` with a `Checkbox` or toggle control, a bounded `ScrollingGroup`/pager for the settings list, and a confirm `Button`."
+                "excerpt": "async def recover_stale_dialog(event, dialog_manager: DialogManager):\n    log.exception(\"Stale dialog callback\", exc_info=event.exception)\n    callback = getattr(event.update, \"callback_query\", None)\n    if callback:\n        await callback.answer()\n    await dialog_manager.start(\n        SettingsSG.edit,\n        mode=StartMode.RESET_STACK,\n        show_mode=ShowMode.SEND,\n    )\n\n\ndef build_dispatcher(\n    storage: BaseStorage, settings_repo, server_catalog\n) -> Dispatcher:\n    dp = Dispatcher(\n        storage=storage,\n        settings_repo=settings_repo,\n        server_catalog=server_catalog,\n    )\n    dp.include_router(native_router)\n    dp.include_router(settings_dialog)\n    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownIntent))\n    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownState))\n    setup_dialogs(dp)\n    return dp\n```\n\nUse shared persistent FSM storage in production. Persistence reduces restart loss, but it cannot make a removed state name valid after a deployment. The centralized recovery acknowledges the stale callback, discards the arbitrary stack with `RESET_STACK`, and uses `ShowMode.SEND` so recovery does not try to edit the stale message again."
               }
             }
           ]
@@ -592,12 +611,12 @@
         "control": {
           "retrieval": [
             {
-              "assertion": "Routes to deployment and webhook operational guidance.",
+              "assertion": "Routes to deployment and production guidance for authenticated durable webhook acknowledgement and bounded polling.",
               "passed": false,
               "evidence": {
                 "kind": "retrieval_trace",
                 "paths": [],
-                "reason": "The control ordered_paths is empty, so none of the three expected references is present."
+                "reason": "The condition case_paths is empty; SKILL.md, references/deployment.md, and references/production-engineering.md are all missing."
               }
             }
           ],
@@ -607,25 +626,33 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Expose a single POST endpoint behind a TLS-terminating reverse proxy and configure `setWebhook` with a high-entropy `secret_token`. For every request, compare Telegram’s secret-token header to the configured value before parsing or dispatching the update, using a constant-time comparison where practical."
+                "excerpt": "await bot.set_webhook(\n    url=\"https://bot.example.com/telegram/update\",\n    secret_token=settings.webhook_secret,\n    allowed_updates=dispatcher.resolve_used_update_types(),\n    drop_pending_updates=False,\n)\n```\n\nGenerate the secret independently of the bot token, keep it in a secret manager, and preserve `X-Telegram-Bot-Api-Secret-Token` through the proxy. Authenticate before reading or parsing the request body, using constant-time comparison:\n\n```python\nasync def webhook(request: web.Request):\n    supplied = request.headers.get(\n        \"X-Telegram-Bot-Api-Secret-Token\", \"\"\n    )\n    if not supplied or not secrets.compare_digest(\n        supplied, request.app[\"webhook_secret\"]\n    ):\n        return web.Response(status=404)"
               }
             },
             {
-              "assertion": "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing.",
-              "passed": true,
+              "assertion": "Sets SimpleRequestHandler handle_in_background=False and explains that the approximately 55-second webhook wait still requires a committed inbox, outbox, or durable queue acceptance boundary before acknowledgement.",
+              "passed": false,
               "evidence": {
-                "kind": "output_excerpt",
-                "excerpt": "Use HTTPS with valid certificates, restrict the endpoint to POST and the expected content type, cap body size and request duration, and apply conservative rate limits. A random URL path and Telegram IP allowlisting can add defense in depth, but neither replaces the secret header; IP rules must account for trusted-proxy configuration so clients cannot spoof forwarding headers. Return success quickly after safely accepting an authenticated update, while durable processing handles longer work."
+                "kind": "missing_output_evidence",
+                "reason": "The response commits an inbox before acknowledging, but it does not configure SimpleRequestHandler with handle_in_background=False or explain the approximately 55-second wait."
+              }
+            },
+            {
+              "assertion": "Declares an explicit positive polling tasks_concurrency_limit sized to downstream capacity, or deliberately uses sequential handle_as_tasks=False, and treats the limit as per bot.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The response deliberately shows sequential polling and mentions a numeric parallel option, but it does not treat the concurrency limit as per bot or size it to downstream capacity."
               }
             }
           ],
           "gap": [
             {
-              "assertion": "Rejects an unauthenticated public POST endpoint and logging the bot token or secret header.",
-              "passed": true,
+              "assertion": "Rejects an unauthenticated public POST endpoint, secret logging, default background acknowledgement, default unbounded polling, and treating a concurrency cap as graceful draining or durability.",
+              "passed": false,
               "evidence": {
-                "kind": "output_excerpt",
-                "excerpt": "Missing or incorrect secrets should receive an immediate 401 or 403 and must never reach bot middleware. Keep the secret in a secret manager, separate from the bot token, and support rotation by updating Telegram and the deployment deliberately."
+                "kind": "missing_output_evidence",
+                "reason": "It authenticates requests and avoids unbounded polling, but does not explicitly reject secret logging, default background acknowledgement, or treating the cap as graceful draining or durability."
               }
             }
           ]
@@ -633,21 +660,24 @@
         "treatment": {
           "retrieval": [
             {
-              "assertion": "Routes to deployment and webhook operational guidance.",
+              "assertion": "Routes to deployment and production guidance for authenticated durable webhook acknowledgement and bounded polling.",
               "passed": true,
               "evidence": {
                 "kind": "retrieval_trace",
                 "paths": [
                   "SKILL.md",
-                  "references/architecture.md",
                   "references/dialogs-and-ui.md",
-                  "references/mini-apps.md",
-                  "references/payments.md",
+                  "references/presentation-and-ux.md",
+                  "references/custom-emoji-system.md",
+                  "assets/custom-emoji-registry.example.json",
+                  "assets/custom-emoji-registry.schema.json",
+                  "scripts/validate_custom_emoji_registry.py",
                   "references/deployment.md",
-                  "references/testing.md",
-                  "references/production-engineering.md"
+                  "references/production-engineering.md",
+                  "references/architecture.md",
+                  "examples/dialog-bot.py"
                 ],
-                "reason": "The shared treatment ordered_paths contains all three expected references: SKILL.md, references/deployment.md, and references/production-engineering.md."
+                "reason": "Every expected_reference is present in the condition case_paths."
               }
             }
           ],
@@ -657,25 +687,33 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Register the webhook with `Bot.set_webhook(..., secret_token=secret, allowed_updates=dp.resolve_used_update_types())`.\n\nUse aiogram’s aiohttp `SimpleRequestHandler` with the same secret and `setup_application` for lifecycle wiring. Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement."
+                "excerpt": "SimpleRequestHandler(\n        dispatcher=dp,\n        bot=bot,\n        handle_in_background=False,\n        secret_token=secret,\n    ).register(app, path=PATH)\n    setup_application(app, dp, bot=bot)\n\n    await bot.set_webhook(\n        url=url,\n        secret_token=secret,\n        allowed_updates=dp.resolve_used_update_types(),\n    )\n    return app\n```\n\n`SimpleRequestHandler` rejects a missing or incorrect secret header before dispatch."
               }
             },
             {
-              "assertion": "Keeps the endpoint narrow, uses HTTPS, and acknowledges updates only after accepted processing.",
+              "assertion": "Sets SimpleRequestHandler handle_in_background=False and explains that the approximately 55-second webhook wait still requires a committed inbox, outbox, or durable queue acceptance boundary before acknowledgement.",
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Expose one stable HTTPS webhook and do not run polling for the same bot. Generate a high-entropy secret once in a trusted administration context, store it separately from `BOT_TOKEN` in an environment variable or secret manager, and reject blank, placeholder, malformed, or weak values at startup. Register the webhook with `Bot.set_webhook(..., secret_token=secret, allowed_updates=dp.resolve_used_update_types())`.\n\nUse aiogram’s aiohttp `SimpleRequestHandler` with the same secret and `setup_application` for lifecycle wiring. Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement. Return success only after an authenticated update reaches the selected acceptance boundary."
+                "excerpt": "SimpleRequestHandler(\n        dispatcher=dp,\n        bot=bot,\n        handle_in_background=False,\n        secret_token=secret,\n    ).register(app, path=PATH)\n    setup_application(app, dp, bot=bot)\n\n    await bot.set_webhook(\n        url=url,\n        secret_token=secret,\n        allowed_updates=dp.resolve_used_update_types(),\n    )\n    return app\n```\n\n`SimpleRequestHandler` rejects a missing or incorrect secret header before dispatch. Do not log the token, secret/header, or unredacted update. Add ingress rate limits, but treat them as defense in depth rather than authentication.\n\n`handle_in_background=False` means HTTP success waits for dispatcher completion. For a loss-sensitive update, keep that handler short and make its success boundary a committed database transaction:\n\n```python\nasync def accept_loss_sensitive(message, event_update, uow_factory):\n    normalized = {\n        \"chat_id\": message.chat.id,\n        \"message_id\": message.message_id,\n        \"user_id\": message.from_user.id,\n    }\n    async with uow_factory() as uow:\n        inserted = await uow.inbox.try_insert(\n            update_id=event_update.update_id,   # UNIQUE / PRIMARY KEY\n            normalized_payload=normalized,\n        )\n        if inserted:\n            await uow.outbox.add(\n                job_key=f\"telegram:{event_update.update_id}\",  # UNIQUE\n                kind=\"process_loss_sensitive_update\",\n                payload=normalized,\n            )\n        await uow.commit()\n```\n\nThe inbox row and outbox job must commit in the same transaction. A duplicate Telegram delivery becomes an idempotent no-op. If the commit fails, propagate the error so the endpoint does not acknowledge success and Telegram can retry. A bounded worker publishes/drains the outbox, retries only transient failures with capped backoff and jitter, and sends exhausted jobs to a dead-letter store. Do not use one `asyncio.create_task()` per update: it is neither durable nor bounded. Finish the commit comfortably inside aiogram’s roughly 55-second webhook wait window."
+              }
+            },
+            {
+              "assertion": "Declares an explicit positive polling tasks_concurrency_limit sized to downstream capacity, or deliberately uses sequential handle_as_tasks=False, and treats the limit as per bot.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "A production polling alternative with bounded update tasks is:\n\n```python\nasync def run_polling(bot: Bot, dp: Dispatcher, limit: int = 64):\n    if limit <= 0:\n        raise ValueError(\"limit must be positive\")\n    await bot.delete_webhook(drop_pending_updates=False)\n    await dp.start_polling(\n        bot,\n        allowed_updates=dp.resolve_used_update_types(),\n        handle_as_tasks=True,\n        tasks_concurrency_limit=limit,\n    )\n```\n\nSize the limit against the DB pool, outbound limits, and handler cost. Multiple bots multiply the bound. A strictly sequential deployment can use `handle_as_tasks=False`; either way, own shutdown draining and keep slow work behind the same durable, bounded outbox workers."
               }
             }
           ],
           "gap": [
             {
-              "assertion": "Rejects an unauthenticated public POST endpoint and logging the bot token or secret header.",
+              "assertion": "Rejects an unauthenticated public POST endpoint, secret logging, default background acknowledgement, default unbounded polling, and treating a concurrency cap as graceful draining or durability.",
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement. Return success only after an authenticated update reaches the selected acceptance boundary. If work continues asynchronously and loss is unacceptable, that boundary is a committed inbox/outbox or durable queue record, not an in-memory task. Never log the secret header, bot token, or raw update."
+                "excerpt": "SimpleRequestHandler(\n        dispatcher=dp,\n        bot=bot,\n        handle_in_background=False,\n        secret_token=secret,\n    ).register(app, path=PATH)\n    setup_application(app, dp, bot=bot)\n\n    await bot.set_webhook(\n        url=url,\n        secret_token=secret,\n        allowed_updates=dp.resolve_used_update_types(),\n    )\n    return app\n```\n\n`SimpleRequestHandler` rejects a missing or incorrect secret header before dispatch. Do not log the token, secret/header, or unredacted update. Add ingress rate limits, but treat them as defense in depth rather than authentication.\n\n`handle_in_background=False` means HTTP success waits for dispatcher completion. For a loss-sensitive update, keep that handler short and make its success boundary a committed database transaction:\n\n```python\nasync def accept_loss_sensitive(message, event_update, uow_factory):\n    normalized = {\n        \"chat_id\": message.chat.id,\n        \"message_id\": message.message_id,\n        \"user_id\": message.from_user.id,\n    }\n    async with uow_factory() as uow:\n        inserted = await uow.inbox.try_insert(\n            update_id=event_update.update_id,   # UNIQUE / PRIMARY KEY\n            normalized_payload=normalized,\n        )\n        if inserted:\n            await uow.outbox.add(\n                job_key=f\"telegram:{event_update.update_id}\",  # UNIQUE\n                kind=\"process_loss_sensitive_update\",\n                payload=normalized,\n            )\n        await uow.commit()\n```\n\nThe inbox row and outbox job must commit in the same transaction. A duplicate Telegram delivery becomes an idempotent no-op. If the commit fails, propagate the error so the endpoint does not acknowledge success and Telegram can retry. A bounded worker publishes/drains the outbox, retries only transient failures with capped backoff and jitter, and sends exhausted jobs to a dead-letter store. Do not use one `asyncio.create_task()` per update: it is neither durable nor bounded. Finish the commit comfortably inside aiogram’s roughly 55-second webhook wait window.\n\nReadiness should remain false until the database and essential worker/queue dependencies are usable. During shutdown: stop intake, mark unready, drain bounded in-flight acceptance work, then close workers, pools, and bot sessions.\n\nA production polling alternative with bounded update tasks is:\n\n```python\nasync def run_polling(bot: Bot, dp: Dispatcher, limit: int = 64):\n    if limit <= 0:\n        raise ValueError(\"limit must be positive\")\n    await bot.delete_webhook(drop_pending_updates=False)\n    await dp.start_polling(\n        bot,\n        allowed_updates=dp.resolve_used_update_types(),\n        handle_as_tasks=True,\n        tasks_concurrency_limit=limit,\n    )\n```\n\nSize the limit against the DB pool, outbound limits, and handler cost. Multiple bots multiply the bound. A strictly sequential deployment can use `handle_as_tasks=False`; either way, own shutdown draining and keep slow work behind the same durable, bounded outbox workers."
               }
             }
           ]
@@ -1132,12 +1170,12 @@
         "control": {
           "retrieval": [
             {
-              "assertion": "Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance.",
+              "assertion": "Finds the dedicated custom-emoji capability and selection guidance, then follows its links to the bundled JSON Schema and offline semantic validator.",
               "passed": false,
               "evidence": {
                 "kind": "retrieval_trace",
                 "paths": [],
-                "reason": "The control case_paths list is empty, so neither expected reference is present."
+                "reason": "The condition case_paths is empty; all four expected references are missing."
               }
             }
           ],
@@ -1147,7 +1185,7 @@
               "passed": false,
               "evidence": {
                 "kind": "missing_output_evidence",
-                "reason": "The control says Premium must be active for the bot owner and treats that as the enabling premise; it never states that a bot is not a Premium user and does not correctly exclude channel capability."
+                "reason": "The response limits owner Premium by surface, but does not explicitly correct the bot-Premium premise and incorrectly substitutes channel posting rights for the required channel capability."
               }
             },
             {
@@ -1155,7 +1193,7 @@
               "passed": false,
               "evidence": {
                 "kind": "missing_output_evidence",
-                "reason": "The model chooses closed semantic keys and an unknown value can yield no custom emoji, but the control defines no pack-first resolver under an explicit coherence lock with a deterministic fallback chain."
+                "reason": "The model emits a semantic slot, but the resolver lacks a pack-first coherence lock and its fallback does not explicitly end in no icon."
               }
             },
             {
@@ -1163,7 +1201,15 @@
               "passed": false,
               "evidence": {
                 "kind": "missing_output_evidence",
-                "reason": "The control verifies Telegram IDs, but it records neither license nor provenance and treats selection from a public pack as sufficient source guidance."
+                "reason": "The response requires live IDs but does not require explicit license and provenance or reject a public link as redistribution permission."
+              }
+            },
+            {
+              "assertion": "Uses the bundled Draft 2020-12 Schema for record shape and the offline validator for cross-record invariants, while keeping authorized live set-membership verification separate.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "The response describes generic offline and live checks but does not use the bundled Draft 2020-12 Schema and bundled semantic validator."
               }
             }
           ],
@@ -1173,7 +1219,15 @@
               "passed": false,
               "evidence": {
                 "kind": "missing_output_evidence",
-                "reason": "The control rejects invented IDs and recommends one pack, but it does not reject unlicensed repacking and repeats the incorrect owner-Premium premise for channel use."
+                "reason": "It rejects invented IDs and partly limits Premium, but does not reject arbitrary cross-pack mixing or unlicensed repacking."
+              }
+            },
+            {
+              "assertion": "Rejects enabling unresolved, ambiguous, duplicate, repaint-incompatible, or wrong-pack registry records.",
+              "passed": false,
+              "evidence": {
+                "kind": "missing_output_evidence",
+                "reason": "It mentions placeholders and duplicates, but does not reject the full conjunction of unresolved, ambiguous, repaint-incompatible, and wrong-pack enabled records."
               }
             }
           ]
@@ -1181,17 +1235,24 @@
         "treatment": {
           "retrieval": [
             {
-              "assertion": "Finds the dedicated custom-emoji capability, registry, provenance, and deterministic-selection guidance.",
+              "assertion": "Finds the dedicated custom-emoji capability and selection guidance, then follows its links to the bundled JSON Schema and offline semantic validator.",
               "passed": true,
               "evidence": {
                 "kind": "retrieval_trace",
                 "paths": [
                   "SKILL.md",
-                  "references/presentation-and-ux.md",
                   "references/dialogs-and-ui.md",
-                  "references/custom-emoji-system.md"
+                  "references/presentation-and-ux.md",
+                  "references/custom-emoji-system.md",
+                  "assets/custom-emoji-registry.example.json",
+                  "assets/custom-emoji-registry.schema.json",
+                  "scripts/validate_custom_emoji_registry.py",
+                  "references/deployment.md",
+                  "references/production-engineering.md",
+                  "references/architecture.md",
+                  "examples/dialog-bot.py"
                 ],
-                "reason": "Both expected references are present in the treatment case_paths; under the stipulated all-expected-present rule, the two additional paths do not make retrieval fail."
+                "reason": "Every expected_reference is present in the condition case_paths."
               }
             }
           ],
@@ -1201,7 +1262,7 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Критичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют."
+                "excerpt": "Premium владельца покрывает сообщения бота в private/group/supergroup, но не публикации в канале. Для канала нужен режим `fragment_username` с подходящим дополнительным username; иначе кнопки канала должны оставаться без custom icon. Premium зрителя и права администратора канала этого не меняют."
               }
             },
             {
@@ -1209,7 +1270,7 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "ИИ выбирает не ID, а только семантический токен из закрытого списка:\n\n```json\n{\n  \"token\": \"payment\",\n  \"role\": \"action\",\n  \"state\": \"default\",\n  \"polarity\": \"neutral\"\n}\n```\n\nДальше обычный детерминированный код:\n\n1. Проверяет тип чата и разрешённую capability.\n2. Фиксирует один `pack_id` на весь экран или диалог.\n3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.\n4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.\n5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.\n6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.\n\nВ aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:\n\n```python\nInlineKeyboardButton(\n    text=\"Оплатить\",\n    callback_data=\"pay\",\n    icon_custom_emoji_id=registry.resolve(\n        token=\"payment\",\n        role=\"action\",\n        target_chat_type=chat.type,\n    ),\n)\n```"
+                "excerpt": "ИИ выбирает только `{token, role, state, polarity}`. Детерминированный resolver затем:\n\n1. отфильтровывает pack по capability, chat type, лицензии, роли и верификации;\n2. фиксирует один `pack_id` на весь экран;\n3. выбирает exact token, затем alias;\n4. исключает semantic collisions;\n5. разрешает ничью по `selection_priority`, затем лексически;\n6. переключает весь экран на совместимый pack, единую Unicode-схему либо на режим без иконок."
               }
             },
             {
@@ -1217,7 +1278,15 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:\n\n```yaml\npack_id: bot_ui_adaptive\ntelegram_set_name: bot_ui_adaptive_by_<bot_username>\ncoherence_group: bot_ui_v1\nsource: lucide\nlicense_spdx: ISC\nneeds_repainting: true\nstatus: awaiting_telegram_verification\n\nemoji:\n  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}\n  profile: {asset: user-round, custom_emoji_id: null, enabled: false}\n  servers: {asset: server, custom_emoji_id: null, enabled: false}\n  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}\n  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}\n  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}\n  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}\n```\n\nПосле публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.\n\nПубличные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным."
+                "excerpt": "Telegram ID нельзя корректно «выбрать» или сгенерировать: это значение возвращает Telegram для конкретного custom-emoji sticker. Поэтому я не буду подставлять правдоподобные числа. До live-проверки все ID должны быть `null`, а записи — `enabled: false`.\n\nДля единого интерфейса я выбрал бы собственный адаптивный набор на базе Lucide (ISC, outline, monochrome, `needs_repainting: true`):\n\n| token | Lucide source icon | role |\n|---|---|---|\n| `payment` | `credit-card` | action/category |\n| `profile` | `circle-user-round` | action/category |\n| `servers` | `server` | action/category |\n| `support` | `headset` | action/category |\n| `back` | `arrow-left` | navigation |\n| `warning` | `triangle-alert` | status |\n| `delete` | `trash-2` | action, destructive |\n\n«Популярный публичный набор» не гарантирует ни лицензию, ни стабильность, ни полный семантический ряд. Ссылку `t.me/addemoji/...` можно хранить только как `public_reference` после проверки автора, прав, точного имени set и ID; сама ссылка не разрешает копирование."
+              }
+            },
+            {
+              "assertion": "Uses the bundled Draft 2020-12 Schema for record shape and the offline validator for cross-record invariants, while keeping authorized live set-membership verification separate.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "Offline-этап: JSON Schema Draft 2020-12 плюс семантический validator:\n\n```shell\npython validate_custom_emoji_registry.py registry/custom-emoji.v1.json\n```\n\nПосле явного разрешения live-этап вызывает `getStickerSet(expected_name)`, затем `getCustomEmojiStickers` партиями до 200 ID. Каждый ответ должен быть уникальным, иметь ожидаемый `set_name`, пройти визуальную проверку в светлой/тёмной теме и только затем получить `verified_at`, `review_status: \"verified\"` и `enabled: true`."
               }
             }
           ],
@@ -1227,7 +1296,15 @@
               "passed": true,
               "evidence": {
                 "kind": "output_excerpt",
-                "excerpt": "Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:\n\n```yaml\npack_id: bot_ui_adaptive\ntelegram_set_name: bot_ui_adaptive_by_<bot_username>\ncoherence_group: bot_ui_v1\nsource: lucide\nlicense_spdx: ISC\nneeds_repainting: true\nstatus: awaiting_telegram_verification\n\nemoji:\n  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}\n  profile: {asset: user-round, custom_emoji_id: null, enabled: false}\n  servers: {asset: server, custom_emoji_id: null, enabled: false}\n  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}\n  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}\n  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}\n  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}\n```\n\nПосле публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.\n\nПубличные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным.\n\nИИ выбирает не ID, а только семантический токен из закрытого списка:\n\n```json\n{\n  \"token\": \"payment\",\n  \"role\": \"action\",\n  \"state\": \"default\",\n  \"polarity\": \"neutral\"\n}\n```\n\nДальше обычный детерминированный код:\n\n1. Проверяет тип чата и разрешённую capability.\n2. Фиксирует один `pack_id` на весь экран или диалог.\n3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.\n4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.\n5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.\n6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.\n\nВ aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:\n\n```python\nInlineKeyboardButton(\n    text=\"Оплатить\",\n    callback_data=\"pay\",\n    icon_custom_emoji_id=registry.resolve(\n        token=\"payment\",\n        role=\"action\",\n        target_chat_type=chat.type,\n    ),\n)\n```\n\nКритичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют."
+                "excerpt": "Telegram ID нельзя корректно «выбрать» или сгенерировать: это значение возвращает Telegram для конкретного custom-emoji sticker. Поэтому я не буду подставлять правдоподобные числа. До live-проверки все ID должны быть `null`, а записи — `enabled: false`.\n\nДля единого интерфейса я выбрал бы собственный адаптивный набор на базе Lucide (ISC, outline, monochrome, `needs_repainting: true`):\n\n| token | Lucide source icon | role |\n|---|---|---|\n| `payment` | `credit-card` | action/category |\n| `profile` | `circle-user-round` | action/category |\n| `servers` | `server` | action/category |\n| `support` | `headset` | action/category |\n| `back` | `arrow-left` | navigation |\n| `warning` | `triangle-alert` | status |\n| `delete` | `trash-2` | action, destructive |\n\n«Популярный публичный набор» не гарантирует ни лицензию, ни стабильность, ни полный семантический ряд. Ссылку `t.me/addemoji/...` можно хранить только как `public_reference` после проверки автора, прав, точного имени set и ID; сама ссылка не разрешает копирование. Для долговечного UI лучше owned-set с именем вида `brand_ui_v1_by_MyBot`.\n\nRegistry хранить как `registry/custom-emoji.v1.json`:\n\n```json\n{\n  \"$schema\": \"./custom-emoji-registry.schema.json\",\n  \"schema_version\": 1,\n  \"catalog_kind\": \"production\",\n  \"packs\": [{\n    \"pack_id\": \"lucide_ui_adaptive\",\n    \"telegram_set_name\": null,\n    \"telegram_set_origin\": \"unpublished_template\",\n    \"coherence_group\": \"lucide_ui_v1\",\n    \"status\": \"template\",\n    \"selection_priority\": 100,\n    \"trust\": \"licensed_source\",\n    \"source_kind\": \"licensed_source\",\n    \"source_url\": \"https://github.com/lucide-icons/lucide\",\n    \"source_revision\": null,\n    \"license_spdx\": \"ISC\",\n    \"license_url\": \"https://github.com/lucide-icons/lucide/blob/main/LICENSE\",\n    \"notice_required\": true,\n    \"redistribution\": \"allowed_with_notice\",\n    \"allowed_roles\": [\"action\", \"navigation\", \"status\", \"category\"],\n    \"brand_safe\": true,\n    \"needs_repainting\": true,\n    \"style\": {\n      \"family\": \"lucide_outline\",\n      \"palette\": \"adaptive_monochrome\",\n      \"line_weight\": \"regular\",\n      \"detail\": \"low\",\n      \"animation\": \"none\",\n      \"mood\": \"calm\",\n      \"density\": \"compact\"\n    }\n  }],\n  \"semantic_collision_groups\": {\n    \"severity\": [\"warning\", \"error\"],\n    \"commerce\": [\"payment\", \"refund\"],\n    \"destructive\": [\"delete\", \"archive\"]\n  },\n  \"emoji\": []\n}\n```\n\nВ `emoji` добавляются семь записей из таблицы со всеми полями схемы: aliases, polarity, state, roles, source_icon, semantic_description, `custom_emoji_id: null`, `verified_at: null`, `review_status: \"awaiting_telegram_id\"` и `enabled: false`.\n\nИИ выбирает только `{token, role, state, polarity}`. Детерминированный resolver затем:\n\n1. отфильтровывает pack по capability, chat type, лицензии, роли и верификации;\n2. фиксирует один `pack_id` на весь экран;\n3. выбирает exact token, затем alias;\n4. исключает semantic collisions;\n5. разрешает ничью по `selection_priority`, затем лексически;\n6. переключает весь экран на совместимый pack, единую Unicode-схему либо на режим без иконок.\n\nPremium владельца покрывает сообщения бота в private/group/supergroup, но не публикации в канале. Для канала нужен режим `fragment_username` с подходящим дополнительным username; иначе кнопки канала должны оставаться без custom icon. Premium зрителя и права администратора канала этого не меняют."
+              }
+            },
+            {
+              "assertion": "Rejects enabling unresolved, ambiguous, duplicate, repaint-incompatible, or wrong-pack registry records.",
+              "passed": true,
+              "evidence": {
+                "kind": "output_excerpt",
+                "excerpt": "ИИ выбирает только `{token, role, state, polarity}`. Детерминированный resolver затем:\n\n1. отфильтровывает pack по capability, chat type, лицензии, роли и верификации;\n2. фиксирует один `pack_id` на весь экран;\n3. выбирает exact token, затем alias;\n4. исключает semantic collisions;\n5. разрешает ничью по `selection_priority`, затем лексически;\n6. переключает весь экран на совместимый pack, единую Unicode-схему либо на режим без иконок.\n\nPremium владельца покрывает сообщения бота в private/group/supergroup, но не публикации в канале. Для канала нужен режим `fragment_username` с подходящим дополнительным username; иначе кнопки канала должны оставаться без custom icon. Premium зрителя и права администратора канала этого не меняют.\n\nOffline-этап: JSON Schema Draft 2020-12 плюс семантический validator:\n\n```shell\npython validate_custom_emoji_registry.py registry/custom-emoji.v1.json\n```\n\nПосле явного разрешения live-этап вызывает `getStickerSet(expected_name)`, затем `getCustomEmojiStickers` партиями до 200 ID. Каждый ответ должен быть уникальным, иметь ожидаемый `set_name`, пройти визуальную проверку в светлой/тёмной теме и только затем получить `verified_at`, `review_status: \"verified\"` и `enabled: true`."
               }
             }
           ]

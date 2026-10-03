@@ -1,13 +1,15 @@
 # Results with skill — recorded treatment run
 
-Run `treatment-20260820-composite-r7` combines the original ten-case runner
-`/root/eval_treatment_round3` with fresh isolated runners
-`/root/final_treatment_native_r2` and `/root/final_treatment_emoji_r2` on
-2026-08-19 and 2026-08-20. Each runner received prompt text directly, read `SKILL.md` and only
-locally routed resources, and confirmed it did not read eval rubrics, tests,
-README, prior results, git history, or web content. The exact deployed model
-revision was not exposed. The isolated runners were given frozen bundle SHA-256
-`cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150`.
+Run `treatment-20260820-composite-r8` combines eight unaffected engineering
+cases from the historical runner `/root/eval_treatment_round3`, the prior
+presentation case from `/root/final_treatment_native_r2`, and three freshly
+rerun affected cases from `/root/final_treatment_delivery_registry_r4` on
+2026-08-19 and 2026-08-20. Each runner received prompt text directly, read
+`SKILL.md` and only locally routed resources, and confirmed it did not read eval
+rubrics, tests, README, prior results, git history, or web content. The exact
+deployed model revision was not exposed. The fresh affected-case runner was
+given frozen bundle SHA-256
+`03b1002d0efd7c878fd189ff74bc101db078ff62848473d56cde91f23bde4ba2`.
 See [`retrieval-trace.json`](retrieval-trace.json)
 for each case's self-reported read set and [`run-manifest.json`](run-manifest.json)
 for protocol and hashes.
@@ -26,9 +28,207 @@ Store draft answers only in the user’s `FSMContext` through a persistent `Base
 
 ## dialog-widget-ui
 
-Use aiogram-dialog 2.6.0 because the screen is widget-driven and paginated. Define a `SettingsSG` state and a `Dialog` containing a `Window` with a `Checkbox` or toggle control, a bounded `ScrollingGroup`/pager for the settings list, and a confirm `Button`. Include the dialog router before calling `setup_dialogs(dp)`, and start this top-level screen with `StartMode.RESET_STACK` when a fresh settings session is intended.
+Use native routers for ordinary commands and let `aiogram-dialog` exclusively own the settings flow and its stack.
 
-The getter should be read-only: load the authenticated user’s current settings, clamp the requested page to the server-derived last page, and return render data. Toggle callbacks may update `dialog_data` as a draft, but they must not trust a setting name or value supplied by callback data. Confirm should reload the allowed settings server-side, authorize the actor, validate the draft, and persist all changes atomically through a service. Only then should it call `done()` or render success. A cancel/back action should discard the draft. Acknowledge callbacks on success, denial, and malformed input, and route stale dialog intents through centralized recovery to a safe window.
+```python
+import logging
+from aiogram import Dispatcher, Router
+from aiogram.enums import ButtonStyle
+from aiogram.filters import Command, ExceptionTypeFilter
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.base import BaseStorage
+from aiogram.types import CallbackQuery, Message
+from aiogram_dialog import (
+    Dialog, DialogManager, ShowMode, StartMode, Window, setup_dialogs,
+)
+from aiogram_dialog.api.exceptions import UnknownIntent, UnknownState
+from aiogram_dialog.widgets.kbd import Button, Column, Row, Select, SwitchTo
+from aiogram_dialog.widgets.style import Style
+from aiogram_dialog.widgets.text import Const, Format
+
+log = logging.getLogger(__name__)
+PAGE_SIZE = 5
+native_router = Router(name="native")
+
+
+class SettingsSG(StatesGroup):
+    edit = State()
+    confirm = State()
+
+
+async def load_draft(_start_data, manager: DialogManager):
+    repo = manager.middleware_data["settings_repo"]
+    current = await repo.get(manager.event.from_user.id)
+    manager.dialog_data.update(
+        alerts=current.alerts,
+        server_id=str(current.server_id),
+        version=current.version,
+        page=0,
+    )
+
+
+async def settings_getter(dialog_manager: DialogManager, **_):
+    catalog = dialog_manager.middleware_data["server_catalog"]
+    requested = int(dialog_manager.dialog_data.get("page", 0))
+    total_pages = await catalog.page_count(limit=PAGE_SIZE)
+    final_page = max(0, total_pages - 1)
+    page = min(max(0, requested), final_page)
+    result = await catalog.list_page(page=page, limit=PAGE_SIZE)
+    selected = await catalog.get(dialog_manager.dialog_data["server_id"])
+    return {
+        "alerts_label": "On" if dialog_manager.dialog_data["alerts"] else "Off",
+        "selected_name": selected.name,
+        "items": [{"id": str(x.id), "name": x.name} for x in result.items],
+        "page_label": f"{page + 1}/{max(1, total_pages)}",
+        "has_previous": page > 0,
+        "has_next": result.has_next,
+    }
+
+
+async def toggle_alerts(
+    callback: CallbackQuery, _button: Button, manager: DialogManager
+):
+    manager.dialog_data["alerts"] = not manager.dialog_data["alerts"]
+    await callback.answer()
+
+
+async def move_page(callback, _button, manager: DialogManager, delta: int):
+    catalog = manager.middleware_data["server_catalog"]
+    total_pages = await catalog.page_count(limit=PAGE_SIZE)
+    final_page = max(0, total_pages - 1)
+    current = int(manager.dialog_data.get("page", 0))
+    manager.dialog_data["page"] = min(max(0, current + delta), final_page)
+    await callback.answer()
+
+
+async def previous_page(c, b, m):
+    await move_page(c, b, m, -1)
+
+
+async def next_page(c, b, m):
+    await move_page(c, b, m, 1)
+
+
+async def select_server(
+    callback: CallbackQuery, _select: Select, manager: DialogManager, item_id: str
+):
+    try:
+        server_id = int(item_id)
+    except (TypeError, ValueError):
+        await callback.answer("This server is no longer valid.", show_alert=True)
+        return
+    catalog = manager.middleware_data["server_catalog"]
+    server = await catalog.get_visible(server_id, callback.from_user.id)
+    if server is None:
+        await callback.answer("This server is unavailable.", show_alert=True)
+        return
+    manager.dialog_data["server_id"] = str(server.id)
+    await callback.answer()
+
+
+async def confirm_settings(
+    callback: CallbackQuery, _button: Button, manager: DialogManager
+):
+    await callback.answer()
+    catalog = manager.middleware_data["server_catalog"]
+    server_id = int(manager.dialog_data["server_id"])
+    if await catalog.get_visible(server_id, callback.from_user.id) is None:
+        raise ValueError("selected server became unavailable")
+
+    repo = manager.middleware_data["settings_repo"]
+    await repo.save(
+        user_id=callback.from_user.id,
+        alerts=manager.dialog_data["alerts"],
+        server_id=server_id,
+        expected_version=manager.dialog_data["version"],
+    )
+    await manager.done()
+
+
+settings_dialog = Dialog(
+    Window(
+        Format(
+            "Settings\n\nNotifications: {alerts_label}\n"
+            "Selected server: {selected_name}"
+        ),
+        Button(
+            Format("Notifications: {alerts_label}"),
+            id="toggle_alerts",
+            on_click=toggle_alerts,
+        ),
+        Column(
+            Select(
+                Format("{item[name]}"),
+                id="server",
+                item_id_getter=lambda item: item["id"],
+                items="items",
+                on_click=select_server,
+            )
+        ),
+        Row(
+            Button(Const("Previous"), id="prev", on_click=previous_page,
+                   when="has_previous"),
+            Button(Const("Next"), id="next", on_click=next_page,
+                   when="has_next"),
+        ),
+        Format("Page {page_label}"),
+        SwitchTo(Const("Review changes"), id="review", state=SettingsSG.confirm),
+        getter=settings_getter,
+        state=SettingsSG.edit,
+    ),
+    Window(
+        Format(
+            "Confirm settings\n\nNotifications: {alerts_label}\n"
+            "Server: {selected_name}"
+        ),
+        SwitchTo(Const("Back"), id="back", state=SettingsSG.edit),
+        Button(
+            Const("Confirm and save"),
+            id="confirm",
+            on_click=confirm_settings,
+            style=Style(style=ButtonStyle.SUCCESS),
+        ),
+        getter=settings_getter,
+        state=SettingsSG.confirm,
+    ),
+    on_start=load_draft,
+)
+
+
+@native_router.message(Command("settings"))
+async def open_settings(_message: Message, manager: DialogManager):
+    await manager.start(SettingsSG.edit, mode=StartMode.RESET_STACK)
+
+
+async def recover_stale_dialog(event, dialog_manager: DialogManager):
+    log.exception("Stale dialog callback", exc_info=event.exception)
+    callback = getattr(event.update, "callback_query", None)
+    if callback:
+        await callback.answer()
+    await dialog_manager.start(
+        SettingsSG.edit,
+        mode=StartMode.RESET_STACK,
+        show_mode=ShowMode.SEND,
+    )
+
+
+def build_dispatcher(
+    storage: BaseStorage, settings_repo, server_catalog
+) -> Dispatcher:
+    dp = Dispatcher(
+        storage=storage,
+        settings_repo=settings_repo,
+        server_catalog=server_catalog,
+    )
+    dp.include_router(native_router)
+    dp.include_router(settings_dialog)
+    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownIntent))
+    dp.errors.register(recover_stale_dialog, ExceptionTypeFilter(UnknownState))
+    setup_dialogs(dp)
+    return dp
+```
+
+Use shared persistent FSM storage in production. Persistence reduces restart loss, but it cannot make a removed state name valid after a deployment. The centralized recovery acknowledges the stale callback, discards the arbitrary stack with `RESET_STACK`, and uses `ShowMode.SEND` so recovery does not try to edit the stale message again.
 
 ## mini-app-launch-security
 
@@ -50,9 +250,97 @@ Fulfillment belongs only in `successful_payment`, never in pre-checkout or a cli
 
 ## webhook-secret
 
-Expose one stable HTTPS webhook and do not run polling for the same bot. Generate a high-entropy secret once in a trusted administration context, store it separately from `BOT_TOKEN` in an environment variable or secret manager, and reject blank, placeholder, malformed, or weak values at startup. Register the webhook with `Bot.set_webhook(..., secret_token=secret, allowed_updates=dp.resolve_used_update_types())`.
+Provision the webhook secret once with `secrets.token_urlsafe(32)`, store it outside source control, and reuse it across restarts. Configure the same value in Telegram and aiogram’s request handler:
 
-Use aiogram’s aiohttp `SimpleRequestHandler` with the same secret and `setup_application` for lifecycle wiring. Its request boundary must reject a missing or invalid Telegram secret header before parsing the body or invoking the dispatcher; rejected traffic must not receive a success acknowledgement. Return success only after an authenticated update reaches the selected acceptance boundary. If work continues asynchronously and loss is unacceptable, that boundary is a committed inbox/outbox or durable queue record, not an in-memory task. Never log the secret header, bot token, or raw update. Keep liveness separate from readiness, require storage/database/queue health for readiness, and stop intake before draining in-flight work and closing resources during shutdown.
+```python
+import os, re
+from urllib.parse import urlsplit
+from aiohttp import web
+from aiogram import Bot, Dispatcher
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+
+PATH = "/telegram/webhook"
+
+
+def load_config():
+    url = os.environ["WEBHOOK_URL"]
+    secret = os.environ["TELEGRAM_WEBHOOK_SECRET"]
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise RuntimeError("WEBHOOK_URL must be absolute HTTPS")
+    if (
+        not re.fullmatch(r"[A-Za-z0-9_-]{43,256}", secret)
+        or secret.casefold() in {"change-me", "example-secret", "placeholder"}
+    ):
+        raise RuntimeError("weak webhook secret")
+    return url, secret
+
+
+async def build_app(bot: Bot, dp: Dispatcher) -> web.Application:
+    url, secret = load_config()
+    app = web.Application()
+
+    SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+        handle_in_background=False,
+        secret_token=secret,
+    ).register(app, path=PATH)
+    setup_application(app, dp, bot=bot)
+
+    await bot.set_webhook(
+        url=url,
+        secret_token=secret,
+        allowed_updates=dp.resolve_used_update_types(),
+    )
+    return app
+```
+
+`SimpleRequestHandler` rejects a missing or incorrect secret header before dispatch. Do not log the token, secret/header, or unredacted update. Add ingress rate limits, but treat them as defense in depth rather than authentication.
+
+`handle_in_background=False` means HTTP success waits for dispatcher completion. For a loss-sensitive update, keep that handler short and make its success boundary a committed database transaction:
+
+```python
+async def accept_loss_sensitive(message, event_update, uow_factory):
+    normalized = {
+        "chat_id": message.chat.id,
+        "message_id": message.message_id,
+        "user_id": message.from_user.id,
+    }
+    async with uow_factory() as uow:
+        inserted = await uow.inbox.try_insert(
+            update_id=event_update.update_id,   # UNIQUE / PRIMARY KEY
+            normalized_payload=normalized,
+        )
+        if inserted:
+            await uow.outbox.add(
+                job_key=f"telegram:{event_update.update_id}",  # UNIQUE
+                kind="process_loss_sensitive_update",
+                payload=normalized,
+            )
+        await uow.commit()
+```
+
+The inbox row and outbox job must commit in the same transaction. A duplicate Telegram delivery becomes an idempotent no-op. If the commit fails, propagate the error so the endpoint does not acknowledge success and Telegram can retry. A bounded worker publishes/drains the outbox, retries only transient failures with capped backoff and jitter, and sends exhausted jobs to a dead-letter store. Do not use one `asyncio.create_task()` per update: it is neither durable nor bounded. Finish the commit comfortably inside aiogram’s roughly 55-second webhook wait window.
+
+Readiness should remain false until the database and essential worker/queue dependencies are usable. During shutdown: stop intake, mark unready, drain bounded in-flight acceptance work, then close workers, pools, and bot sessions.
+
+A production polling alternative with bounded update tasks is:
+
+```python
+async def run_polling(bot: Bot, dp: Dispatcher, limit: int = 64):
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+    await bot.delete_webhook(drop_pending_updates=False)
+    await dp.start_polling(
+        bot,
+        allowed_updates=dp.resolve_used_update_types(),
+        handle_as_tasks=True,
+        tasks_concurrency_limit=limit,
+    )
+```
+
+Size the limit against the DB pool, outbound limits, and handler cost. Multiple bots multiply the bound. A strictly sequential deployment can use `handle_as_tasks=False`; either way, own shutdown draining and keep slow work behind the same durable, bounded outbox workers.
 
 ## background-jobs
 
@@ -235,84 +523,83 @@ home:support
 
 ## custom-emoji-capability-selection
 
-Итоговый выбор — один адаптивный монохромный набор `bot_ui_adaptive`, без смешивания разных Telegram-паков. Основа — популярное открытое семейство Lucide (ISC), из которого создаётся собственный Telegram custom emoji set с `needs_repainting=true`.
+Telegram ID нельзя корректно «выбрать» или сгенерировать: это значение возвращает Telegram для конкретного custom-emoji sticker. Поэтому я не буду подставлять правдоподобные числа. До live-проверки все ID должны быть `null`, а записи — `enabled: false`.
 
-| Токен | Подпись кнопки | Иконка Lucide | Назначение |
-|---|---|---|---|
-| `payment` | Оплатить | `credit-card` | оплата или продление |
-| `profile` | Профиль | `user-round` | личный кабинет |
-| `servers` | Серверы | `server` | выбор сервера |
-| `support` | Поддержка | `life-buoy` | обращение в поддержку |
-| `back` | Назад | `arrow-left` | навигация назад |
-| `warning` | Проверить проблему | `triangle-alert` | предупреждение, но не ошибка |
-| `delete` | Удалить сервер | `trash-2` | необратимое удаление |
+Для единого интерфейса я выбрал бы собственный адаптивный набор на базе Lucide (ISC, outline, monochrome, `needs_repainting: true`):
 
-Подписи остаются полными: custom emoji только ускоряет распознавание и никогда не заменяет текст. `delete` получает стиль `danger` и отдельный экран подтверждения с названием объекта и последствиями. `payment` может быть `primary`, если это главное действие экрана; `back`, `profile`, `servers` и `support` обычно остаются обычными.
+| token | Lucide source icon | role |
+|---|---|---|
+| `payment` | `credit-card` | action/category |
+| `profile` | `circle-user-round` | action/category |
+| `servers` | `server` | action/category |
+| `support` | `headset` | action/category |
+| `back` | `arrow-left` | navigation |
+| `warning` | `triangle-alert` | status |
+| `delete` | `trash-2` | action, destructive |
 
-Числовые `custom_emoji_id` нельзя назначить самостоятельно: это непрозрачные ID, которые выдаёт Telegram опубликованным emoji. Любые заранее придуманные числа были бы нерабочими. Безопасный исходный реестр поэтому выглядит так:
+«Популярный публичный набор» не гарантирует ни лицензию, ни стабильность, ни полный семантический ряд. Ссылку `t.me/addemoji/...` можно хранить только как `public_reference` после проверки автора, прав, точного имени set и ID; сама ссылка не разрешает копирование. Для долговечного UI лучше owned-set с именем вида `brand_ui_v1_by_MyBot`.
 
-```yaml
-pack_id: bot_ui_adaptive
-telegram_set_name: bot_ui_adaptive_by_<bot_username>
-coherence_group: bot_ui_v1
-source: lucide
-license_spdx: ISC
-needs_repainting: true
-status: awaiting_telegram_verification
-
-emoji:
-  payment: {asset: credit-card, custom_emoji_id: null, enabled: false}
-  profile: {asset: user-round, custom_emoji_id: null, enabled: false}
-  servers: {asset: server, custom_emoji_id: null, enabled: false}
-  support: {asset: life-buoy, custom_emoji_id: null, enabled: false}
-  back: {asset: arrow-left, custom_emoji_id: null, enabled: false}
-  warning: {asset: triangle-alert, custom_emoji_id: null, enabled: false}
-  delete: {asset: trash-2, custom_emoji_id: null, enabled: false}
-```
-
-После публикации набора бот вызывает `getStickerSet`, затем проверяет все полученные ID через `getCustomEmojiStickers`. Запись включается только если ID уникален, существует и его `set_name` точно совпадает с ожидаемым набором. Тогда Telegram-выданные ID записываются строками вместе с датой проверки.
-
-Публичные `t.me/addemoji/...` наборы можно использовать только после ручной проверки автора, прав и конкретных ID. Публичная ссылка и популярность не являются лицензией. Пак с неизвестными правами должен иметь статус `reference_only`; смешивать по одной иконке из семи популярных паков нельзя — интерфейс получится визуально несогласованным.
-
-ИИ выбирает не ID, а только семантический токен из закрытого списка:
+Registry хранить как `registry/custom-emoji.v1.json`:
 
 ```json
 {
-  "token": "payment",
-  "role": "action",
-  "state": "default",
-  "polarity": "neutral"
+  "$schema": "./custom-emoji-registry.schema.json",
+  "schema_version": 1,
+  "catalog_kind": "production",
+  "packs": [{
+    "pack_id": "lucide_ui_adaptive",
+    "telegram_set_name": null,
+    "telegram_set_origin": "unpublished_template",
+    "coherence_group": "lucide_ui_v1",
+    "status": "template",
+    "selection_priority": 100,
+    "trust": "licensed_source",
+    "source_kind": "licensed_source",
+    "source_url": "https://github.com/lucide-icons/lucide",
+    "source_revision": null,
+    "license_spdx": "ISC",
+    "license_url": "https://github.com/lucide-icons/lucide/blob/main/LICENSE",
+    "notice_required": true,
+    "redistribution": "allowed_with_notice",
+    "allowed_roles": ["action", "navigation", "status", "category"],
+    "brand_safe": true,
+    "needs_repainting": true,
+    "style": {
+      "family": "lucide_outline",
+      "palette": "adaptive_monochrome",
+      "line_weight": "regular",
+      "detail": "low",
+      "animation": "none",
+      "mood": "calm",
+      "density": "compact"
+    }
+  }],
+  "semantic_collision_groups": {
+    "severity": ["warning", "error"],
+    "commerce": ["payment", "refund"],
+    "destructive": ["delete", "archive"]
+  },
+  "emoji": []
 }
 ```
 
-Дальше обычный детерминированный код:
+В `emoji` добавляются семь записей из таблицы со всеми полями схемы: aliases, polarity, state, roles, source_icon, semantic_description, `custom_emoji_id: null`, `verified_at: null`, `review_status: "awaiting_telegram_id"` и `enabled: false`.
 
-1. Проверяет тип чата и разрешённую capability.
-2. Фиксирует один `pack_id` на весь экран или диалог.
-3. Ищет включённое и проверенное точное совпадение токена, состояния и роли.
-4. Алиасы вроде `billing → payment` использует только при отсутствии точного совпадения.
-5. Запрещает смысловые подмены: `warning ≠ error`, `delete ≠ archive`, `payment ≠ refund`.
-6. При отсутствии полного согласованного набора убирает иконки со всего экрана либо использует заранее утверждённый общий Unicode-fallback. Отдельную случайную иконку из другого пака не подставляет.
+ИИ выбирает только `{token, role, state, polarity}`. Детерминированный resolver затем:
 
-В aiogram 3.30.0 проверенный ID передаётся в `icon_custom_emoji_id`; `None` означает безопасный текстовый вариант:
+1. отфильтровывает pack по capability, chat type, лицензии, роли и верификации;
+2. фиксирует один `pack_id` на весь экран;
+3. выбирает exact token, затем alias;
+4. исключает semantic collisions;
+5. разрешает ничью по `selection_priority`, затем лексически;
+6. переключает весь экран на совместимый pack, единую Unicode-схему либо на режим без иконок.
 
-```python
-InlineKeyboardButton(
-    text="Оплатить",
-    callback_data="pay",
-    icon_custom_emoji_id=registry.resolve(
-        token="payment",
-        role="action",
-        target_chat_type=chat.type,
-    ),
-)
+Premium владельца покрывает сообщения бота в private/group/supergroup, но не публикации в канале. Для канала нужен режим `fragment_username` с подходящим дополнительным username; иначе кнопки канала должны оставаться без custom icon. Premium зрителя и права администратора канала этого не меняют.
+
+Offline-этап: JSON Schema Draft 2020-12 плюс семантический validator:
+
+```shell
+python validate_custom_emoji_registry.py registry/custom-emoji.v1.json
 ```
 
-Критичное ограничение: Premium владельца не обеспечивает custom emoji в кнопках канала. Бот сам не является Premium-пользователем. Режим `owner_premium` действует для сообщений бота в личных чатах, группах и супергруппах, но не для постов канала; права администратора канала это не меняют.
-
-Поэтому есть только два корректных режима:
-
-- Для иконок действительно везде, включая канал: приобрести для бота требуемое дополнительное имя пользователя на Fragment и настроить capability `fragment_username`. В канале использовать inline-клавиатуру.
-- Если остаётся только Premium владельца: показывать custom emoji в private/group/supergroup, а в канале автоматически отправлять те же кнопки с полными текстовыми подписями, но без `icon_custom_emoji_id`.
-
-Если отправка с иконкой всё же отклонена из-за устаревшей capability, бот один раз повторяет построение экрана без иконок и пишет структурированное предупреждение в журнал, не зацикливая повторные отправки.
+После явного разрешения live-этап вызывает `getStickerSet(expected_name)`, затем `getCustomEmojiStickers` партиями до 200 ID. Каждый ответ должен быть уникальным, иметь ожидаемый `set_name`, пройти визуальную проверку в светлой/тёмной теме и только затем получить `verified_at`, `review_status: "verified"` и `enabled: true`.

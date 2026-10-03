@@ -1,0 +1,420 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Custom emoji semantic registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "catalog_kind",
+    "packs",
+    "semantic_collision_groups",
+    "emoji"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "catalog_kind": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "packs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/pack"
+      }
+    },
+    "semantic_collision_groups": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/semanticName"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 2,
+        "uniqueItems": true,
+        "items": {
+          "$ref": "#/$defs/semanticName"
+        }
+      }
+    },
+    "emoji": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/emojiRecord"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*\\S.*"
+    },
+    "semanticName": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "nullableNonEmptyString": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "role": {
+      "enum": [
+        "action",
+        "navigation",
+        "status",
+        "category",
+        "brand_accent"
+      ]
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "palette",
+        "line_weight",
+        "detail",
+        "animation",
+        "mood",
+        "density"
+      ],
+      "properties": {
+        "family": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "palette": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "line_weight": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "detail": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "animation": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "mood": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "density": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pack_id",
+        "telegram_set_name",
+        "telegram_set_origin",
+        "coherence_group",
+        "status",
+        "selection_priority",
+        "trust",
+        "source_kind",
+        "source_url",
+        "source_revision",
+        "license_spdx",
+        "license_url",
+        "notice_required",
+        "redistribution",
+        "allowed_roles",
+        "brand_safe",
+        "needs_repainting",
+        "style"
+      ],
+      "properties": {
+        "pack_id": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "telegram_set_name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^(?!.*__)[A-Za-z][A-Za-z0-9_]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "telegram_set_origin": {
+          "enum": [
+            "owned",
+            "public_reference",
+            "unpublished_template"
+          ]
+        },
+        "coherence_group": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "status": {
+          "enum": [
+            "template",
+            "active",
+            "disabled",
+            "reference_only"
+          ]
+        },
+        "selection_priority": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trust": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_revision": {
+          "$ref": "#/$defs/nullableNonEmptyString"
+        },
+        "license_spdx": {
+          "$ref": "#/$defs/nullableNonEmptyString"
+        },
+        "license_url": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "uri"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notice_required": {
+          "type": "boolean"
+        },
+        "redistribution": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allowed_roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/role"
+          }
+        },
+        "brand_safe": {
+          "type": "boolean"
+        },
+        "needs_repainting": {
+          "type": "boolean"
+        },
+        "style": {
+          "$ref": "#/$defs/style"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "telegram_set_origin": {
+                "const": "owned"
+              }
+            },
+            "required": [
+              "telegram_set_origin"
+            ]
+          },
+          "then": {
+            "properties": {
+              "telegram_set_name": {
+                "type": "string",
+                "maxLength": 64,
+                "pattern": "^(?!.*__)[A-Za-z][A-Za-z0-9_]*_by_[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "telegram_set_origin": {
+                "const": "unpublished_template"
+              }
+            },
+            "required": [
+              "telegram_set_origin"
+            ]
+          },
+          "then": {
+            "properties": {
+              "telegram_set_name": {
+                "type": "null"
+              },
+              "status": {
+                "const": "template"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "telegram_set_origin": {
+                "const": "public_reference"
+              }
+            },
+            "required": [
+              "telegram_set_origin"
+            ]
+          },
+          "then": {
+            "properties": {
+              "telegram_set_name": {
+                "type": "string",
+                "maxLength": 64,
+                "pattern": "^(?!.*__)[A-Za-z][A-Za-z0-9_]*$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "emojiRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pack_id",
+        "token",
+        "aliases",
+        "source_icon",
+        "polarity",
+        "state",
+        "roles",
+        "custom_emoji_id",
+        "semantic_description",
+        "rich_text_alternative_emoji",
+        "fallback_unicode",
+        "needs_repainting",
+        "enabled",
+        "verified_at",
+        "review_status"
+      ],
+      "properties": {
+        "pack_id": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "token": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/semanticName"
+          }
+        },
+        "source_icon": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "polarity": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "state": {
+          "$ref": "#/$defs/semanticName"
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/role"
+          }
+        },
+        "custom_emoji_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "rich_text_alternative_emoji": {
+          "$ref": "#/$defs/nullableNonEmptyString"
+        },
+        "fallback_unicode": {
+          "$ref": "#/$defs/nullableNonEmptyString"
+        },
+        "needs_repainting": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "verified_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "review_status": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "properties": {
+              "custom_emoji_id": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "verified_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "review_status": {
+                "const": "verified"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

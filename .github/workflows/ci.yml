@@ -28,11 +28,14 @@ jobs:
       - name: Lint skill contract
         run: uv run --locked --group test python scripts/lint_skill_contract.py .
 
+      - name: Validate bundled custom emoji registry
+        run: uv run --locked --group test python skill/aiogram-bot-engineering/scripts/validate_custom_emoji_registry.py skill/aiogram-bot-engineering/assets/custom-emoji-registry.example.json
+
       - name: Run code tests
         run: uv run --locked --group test pytest -q
 
       - name: Type-check scripts and example
-        run: uv run --locked --group test mypy scripts skill/aiogram-bot-engineering/examples
+        run: uv run --locked --group test mypy scripts skill/aiogram-bot-engineering/examples skill/aiogram-bot-engineering/scripts
 
       - name: Smoke-test the import-safe example
         run: uv run --locked --group test pytest -q tests/code/test_dialog_bot.py

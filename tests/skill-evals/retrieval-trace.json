@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-08-20T00:25:10.6648376+03:00",
+  "recorded_at": "2026-08-20T04:27:40.1705268+03:00",
   "source": {
     "kind": "originating_runner_self_report_from_tool_history",
     "platform_signed": false,
-    "note": "The original ten treatment cases used one shared batch. The final presentation/custom-emoji cases used fresh isolated runners against frozen bundle SHA-256 cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150 and reported their own path order. Control runners confirmed they read no repository context."
+    "note": "The original unaffected engineering cases shared the historical batch. Native presentation retains its prior isolated runner. The affected dialog/custom-emoji/webhook cases used one fresh shared batch, /root/final_treatment_delivery_registry_r4, against frozen bundle SHA-256 03b1002d0efd7c878fd189ff74bc101db078ff62848473d56cde91f23bde4ba2. All path reports are originating-runner self-reports, not platform-signed."
   },
   "control": {
-    "run_id": "control-20260819-composite-r2",
-    "canonical_task": "composite: /root/eval_baseline_run + /root/baseline_native_ui + /root/baseline_emoji_system",
+    "run_id": "control-20260820-composite-r3",
+    "canonical_task": "composite: historical + /root/baseline_native_ui + /root/eval_control_delivery_registry",
     "granularity": "none",
     "ordered_paths": [],
     "attribution_limit": "The control condition was prohibited from reading the repository skill, eval rubrics, and repository documentation.",
@@ -28,10 +28,10 @@
     }
   },
   "treatment": {
-    "run_id": "treatment-20260820-composite-r7",
-    "canonical_task": "composite: /root/eval_treatment_round3 + /root/final_treatment_native_r2 + /root/final_treatment_emoji_r2",
+    "run_id": "treatment-20260820-composite-r8",
+    "canonical_task": "composite: /root/eval_treatment_round3 + /root/final_treatment_native_r2 + /root/final_treatment_delivery_registry_r4",
     "granularity": "mixed_runs",
-    "final_isolated_bundle_sha256": "cf25cd24f78fc85cf4698caaeb8d54281752afb2ee91e3c5af516546ead2b150",
+    "final_isolated_bundle_sha256": "03b1002d0efd7c878fd189ff74bc101db078ff62848473d56cde91f23bde4ba2",
     "ordered_paths": [
       "SKILL.md",
       "references/architecture.md",
@@ -42,9 +42,13 @@
       "references/testing.md",
       "references/production-engineering.md",
       "references/presentation-and-ux.md",
-      "references/custom-emoji-system.md"
+      "references/custom-emoji-system.md",
+      "assets/custom-emoji-registry.example.json",
+      "assets/custom-emoji-registry.schema.json",
+      "scripts/validate_custom_emoji_registry.py",
+      "examples/dialog-bot.py"
     ],
-    "attribution_limit": "The original ten cases share the same batch paths and do not prove separate per-case reads. The final two paths are isolated-runner self-reports; none of the path reports are platform-signed.",
+    "attribution_limit": "The unaffected engineering cases retain their historical shared-batch paths, and native-presentation-anti-slop retains its prior isolated-runner self-report. dialog-widget-ui, custom-emoji-capability-selection, and webhook-secret share one fresh batch, so separate per-case reads cannot be proven. All path reports are originating-runner self-reports and are not platform-signed.",
     "case_paths": {
       "fsm-linear-flow": [
         "SKILL.md",
@@ -68,13 +72,16 @@
       ],
       "dialog-widget-ui": [
         "SKILL.md",
-        "references/architecture.md",
         "references/dialogs-and-ui.md",
-        "references/mini-apps.md",
-        "references/payments.md",
+        "references/presentation-and-ux.md",
+        "references/custom-emoji-system.md",
+        "assets/custom-emoji-registry.example.json",
+        "assets/custom-emoji-registry.schema.json",
+        "scripts/validate_custom_emoji_registry.py",
         "references/deployment.md",
-        "references/testing.md",
-        "references/production-engineering.md"
+        "references/production-engineering.md",
+        "references/architecture.md",
+        "examples/dialog-bot.py"
       ],
       "mini-app-launch-security": [
         "SKILL.md",
@@ -108,13 +115,16 @@
       ],
       "webhook-secret": [
         "SKILL.md",
-        "references/architecture.md",
         "references/dialogs-and-ui.md",
-        "references/mini-apps.md",
-        "references/payments.md",
+        "references/presentation-and-ux.md",
+        "references/custom-emoji-system.md",
+        "assets/custom-emoji-registry.example.json",
+        "assets/custom-emoji-registry.schema.json",
+        "scripts/validate_custom_emoji_registry.py",
         "references/deployment.md",
-        "references/testing.md",
-        "references/production-engineering.md"
+        "references/production-engineering.md",
+        "references/architecture.md",
+        "examples/dialog-bot.py"
       ],
       "background-jobs": [
         "SKILL.md",
@@ -154,9 +164,16 @@
       ],
       "custom-emoji-capability-selection": [
         "SKILL.md",
-        "references/presentation-and-ux.md",
         "references/dialogs-and-ui.md",
-        "references/custom-emoji-system.md"
+        "references/presentation-and-ux.md",
+        "references/custom-emoji-system.md",
+        "assets/custom-emoji-registry.example.json",
+        "assets/custom-emoji-registry.schema.json",
+        "scripts/validate_custom_emoji_registry.py",
+        "references/deployment.md",
+        "references/production-engineering.md",
+        "references/architecture.md",
+        "examples/dialog-bot.py"
       ]
     }
   }
